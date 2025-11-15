@@ -1,0 +1,108 @@
+# =================================================================
+# General
+# =================================================================
+
+# Environment variables
+# Keep example files, but ignore local secrets
+.env
+.env.*
+!.env.example
+
+# Log files
+*.log
+logs/
+*.log.*
+
+# =================================================================
+# Python
+# =================================================================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# C extensions
+*.so
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Installer logs
+pip-log.txt
+
+# Poetry
+# Do not commit your virtualenv. The name can vary.
+.venv/
+venv/
+env/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# =================================================================
+# Testing & Coverage
+# =================================================================
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# =================================================================
+# Machine Learning & Data
+# =================================================================
+
+# Large data files
+# It's better to manage data outside of Git.
+# Add specific data directories or file types as needed.
+# data/
+# *.csv
+# *.json
+# *.parquet
+
+# Model artifacts
+# Trained models can be large and should not be versioned.
+models/
+*.h5
+*.hdf5
+*.keras
+*.pkl
+*.pickle
+*.joblib
+
+# =================================================================
+# IDE & Editor Configurations
+# =================================================================
+
+# PyCharm
+.idea/
+
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# =================================================================
+# OS-specific files
+# =================================================================
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+ehthumbs.db
