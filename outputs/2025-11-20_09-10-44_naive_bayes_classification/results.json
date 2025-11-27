@@ -1,0 +1,23 @@
+{
+  "timestamp": "2025-11-20T09:10:44.338041",
+  "algorithm": "naive_bayes",
+  "task": "classification",
+  "metrics": {
+    "accuracy": 0.7662337662337663,
+    "precision": 0.6610169491525424,
+    "recall": 0.7090909090909091,
+    "f1_score": 0.6842105263157895,
+    "confusion_matrix": [
+      [
+        79,
+        20
+      ],
+      [
+        16,
+        39
+      ]
+    ],
+    "roc_auc": 0.8253443526170798
+  },
+  "test_samples": 154
+}

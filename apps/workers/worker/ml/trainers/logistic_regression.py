@@ -8,13 +8,13 @@ import numpy as np
 from sklearn.linear_model import LogisticRegression
 
 from .base import BaseTrainer
-from worker.constants import MODEL_TYPE_LINEAR, TASK_CLASSIFICATION
-from worker.ml.utils.trainer_utils import (
+from apps.workers.worker.constants import MODEL_TYPE_LINEAR, TASK_CLASSIFICATION
+from apps.workers.worker.ml.utils.trainer_utils import (
     validate_fit_input,
     validate_predict_input,
     check_model_fitted,
 )
-from worker.ml.utils.validation import (
+from apps.workers.worker.ml.utils.validation import (
     validate_positive_number,
     validate_positive_integer,
 )

@@ -1,0 +1,12 @@
+{
+  "timestamp": "2025-11-20T11:15:00.022921",
+  "algorithm": "kmeans",
+  "task": "clustering",
+  "metrics": {
+    "silhouette_score": 0.5697640532944849,
+    "davies_bouldin_index": 0.5263994238455936,
+    "calinski_harabasz_index": 4344.524956931439,
+    "inertia": 28673638.218558133
+  },
+  "training_samples": 1143
+}

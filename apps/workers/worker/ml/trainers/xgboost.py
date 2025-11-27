@@ -9,13 +9,13 @@ import numpy as np
 from xgboost import XGBClassifier, XGBRegressor
 
 from .base import BaseTrainer
-from worker.constants import MODEL_TYPE_TREE, TASK_CLASSIFICATION, TASK_REGRESSION
-from worker.ml.utils.trainer_utils import (
+from apps.workers.worker.constants import MODEL_TYPE_TREE, TASK_CLASSIFICATION, TASK_REGRESSION
+from apps.workers.worker.ml.utils.trainer_utils import (
     validate_fit_input,
     validate_predict_input,
     check_model_fitted,
 )
-from worker.ml.utils.validation import (
+from apps.workers.worker.ml.utils.validation import (
     validate_positive_integer,
     validate_positive_number,
     validate_probability,
@@ -36,11 +36,11 @@ class XGBoostTrainer(BaseTrainer):
     Task-aware: Instantiates XGBClassifier or XGBRegressor based on task.
     
     Default hyperparameters:
-    - n_estimators: 100 (number of boosting rounds)
-    - max_depth: 6 (maximum tree depth)
+    - n_estimators: 50 (number of boosting rounds)
+    - max_depth: 3 (maximum tree depth)
     - learning_rate: 0.3 (step size shrinkage)
-    - subsample: 1.0 (fraction of samples per tree)
-    - colsample_bytree: 1.0 (fraction of features per tree)
+    - subsample: 0.8 (fraction of samples per tree)
+    - colsample_bytree: 0.8 (fraction of features per tree)
     - random_state: 42 (for reproducibility)
     """
     
@@ -57,11 +57,11 @@ class XGBoostTrainer(BaseTrainer):
         """
         # Set minimal defaults
         defaults = {
-            "n_estimators": 50,          # ✅ Half the rounds = much faster
-            "max_depth": 3,              # ✅ Shallower trees = faster
-            "learning_rate": 0.3,        # Keep same (higher is faster)
-            "subsample": 0.8,            # ✅ Use 80% of samples per tree (faster)
-            "colsample_bytree": 0.8,     # ✅ Use 80% of features per tree (faster)
+            "n_estimators": 50,
+            "max_depth": 3,
+            "learning_rate": 0.3,
+            "subsample": 0.8,
+            "colsample_bytree": 0.8,
             "random_state": 42,
         }
         
@@ -74,13 +74,15 @@ class XGBoostTrainer(BaseTrainer):
         # Pro users: Backend passes use_gpu=True
         # Free users: Backend passes use_gpu=False (default)
         if use_gpu:
-            # Enable GPU for pro users
-            merged_params.setdefault("tree_method", "gpu_hist")
+            # Enable GPU for pro users (XGBoost 2.0+ API)
+            merged_params.setdefault("device", "cuda")
+            merged_params.setdefault("tree_method", "hist")
         else:
             # Force CPU for free users - block any GPU attempts
-            if "tree_method" in merged_params and "gpu" in str(merged_params["tree_method"]).lower():
-                # User tried to enable GPU but they're not pro - override to CPU
-                merged_params["tree_method"] = "hist"
+            merged_params.setdefault("device", "cpu")
+            # Override if user tried to enable GPU
+            if "device" in merged_params and "cuda" in str(merged_params["device"]).lower():
+                merged_params["device"] = "cpu"
         
         super().__init__(name=name, task=task, hyperparameters=merged_params)
     

@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "automl-database"
+version = "0.1.0"
+description = "Shared database models for AutoML Platform"
+authors = ["Periya Samy"]
+readme = "README.md"
+
+# For local development, this package is imported via sys.path manipulation
+# The package structure: packages/database/ is added to sys.path as "database"
+packages = []
+
+[tool.poetry.dependencies]
+python = "^3.11"
+sqlalchemy = "^2.0"
+psycopg2-binary = "^2.9"
+pydantic-settings = "^2.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0"
+pytest-asyncio = "^0.23"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

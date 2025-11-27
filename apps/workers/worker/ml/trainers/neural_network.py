@@ -9,13 +9,13 @@ import numpy as np
 from sklearn.neural_network import MLPClassifier, MLPRegressor
 
 from .base import BaseTrainer
-from worker.constants import MODEL_TYPE_NEURAL, TASK_CLASSIFICATION, TASK_REGRESSION
-from worker.ml.utils.trainer_utils import (
+from apps.workers.worker.constants import MODEL_TYPE_NEURAL, TASK_CLASSIFICATION, TASK_REGRESSION
+from apps.workers.worker.ml.utils.trainer_utils import (
     validate_fit_input,
     validate_predict_input,
     check_model_fitted,
 )
-from worker.ml.utils.validation import (
+from apps.workers.worker.ml.utils.validation import (
     validate_positive_integer,
     validate_positive_number,
     validate_type,
@@ -142,8 +142,15 @@ class NeuralNetworkTrainer(BaseTrainer):
         Validate hyperparameters (loose validation).
         Only checks obvious errors - sklearn handles specific value validation.
         """
-        # Validate hidden_layer_sizes (must be tuple)
+        # Fix JSON serialization issue: convert list to tuple
+        # JSON converts tuples to lists, so we auto-fix it here
         if "hidden_layer_sizes" in self.hyperparameters:
+            if isinstance(self.hyperparameters["hidden_layer_sizes"], list):
+                self.hyperparameters["hidden_layer_sizes"] = tuple(
+                    self.hyperparameters["hidden_layer_sizes"]
+                )
+            
+            # Now validate it's a tuple
             validate_type(
                 self.hyperparameters["hidden_layer_sizes"],
                 "hidden_layer_sizes",

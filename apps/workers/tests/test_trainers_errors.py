@@ -267,18 +267,25 @@ def test_optuna_not_implemented():
 
 
 def test_neural_network_hidden_layers_must_be_tuple():
-    """Test NeuralNetwork: hidden_layer_sizes must be tuple."""
+    """Test NeuralNetwork: hidden_layer_sizes accepts list and auto-converts to tuple."""
     try:
-        # List instead of tuple
-        with pytest.raises(ValueError, match="tuple"):
-            NeuralNetworkTrainer("nn", "classification", {"hidden_layer_sizes": [50]})
+        # List is accepted and auto-converted to tuple
+        trainer = NeuralNetworkTrainer("nn", "classification", {"hidden_layer_sizes": [50]})
         
-        print("✅ NeuralNetwork hidden_layer_sizes validation passed")
+        # Verify it was auto-converted to tuple
+        assert trainer.hyperparameters["hidden_layer_sizes"] == (50,)
+        assert isinstance(trainer.hyperparameters["hidden_layer_sizes"], tuple)
+        
+        # Tuple is also accepted
+        trainer2 = NeuralNetworkTrainer("nn2", "classification", {"hidden_layer_sizes": (100, 50)})
+        assert trainer2.hyperparameters["hidden_layer_sizes"] == (100, 50)
+        assert isinstance(trainer2.hyperparameters["hidden_layer_sizes"], tuple)
+        
+        print("✅ NeuralNetwork hidden_layer_sizes auto-conversion passed")
         
     except Exception as e:
-        print(f"❌ NeuralNetwork hidden_layer_sizes validation failed: {e}")
+        print(f"❌ NeuralNetwork hidden_layer_sizes auto-conversion failed: {e}")
         raise
-
 
 def test_update_hyperparameters_validates():
     """Test update_hyperparameters validates new parameters."""

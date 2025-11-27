@@ -6,7 +6,7 @@ Common helper functions used across multiple trainers.
 
 from typing import Dict, Any, Optional
 import numpy as np
-from worker.constants import (
+from apps.workers.worker.constants import (
     SUPERVISED_TASKS,
     UNSUPERVISED_TASKS,
     TASK_CLASSIFICATION,

@@ -106,3 +106,5 @@ models/
 # Windows
 Thumbs.db
 ehthumbs.db
+site-packages/
+*/site-packages/

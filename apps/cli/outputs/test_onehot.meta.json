@@ -1,0 +1,43 @@
+{
+  "created_at": "2025-11-21T21:30:13.229458",
+  "preprocessing_history": [
+    {
+      "preprocessor": "one_hot_encoding",
+      "params": {
+        "columns": null,
+        "drop_first": false,
+        "max_categories": null,
+        "handle_unknown": "error",
+        "sparse": false
+      },
+      "changes": {
+        "columns_encoded": [
+          "Species"
+        ],
+        "new_columns_created": [
+          "Species_Iris-setosa",
+          "Species_Iris-versicolor",
+          "Species_Iris-virginica"
+        ],
+        "columns_removed": [
+          "Species"
+        ],
+        "unknown_categories_found": {},
+        "total_new_columns": 3
+      },
+      "applied_at": "2025-11-21T21:30:13.234849",
+      "shape_after": [
+        150,
+        8
+      ]
+    }
+  ],
+  "original_shape": [
+    150,
+    6
+  ],
+  "current_shape": [
+    150,
+    8
+  ]
+}

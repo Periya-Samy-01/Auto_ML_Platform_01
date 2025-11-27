@@ -1,0 +1,42 @@
+{
+  "created_at": "2025-11-21T21:22:00.555857",
+  "preprocessing_history": [
+    {
+      "preprocessor": "missing_value_imputation",
+      "params": {
+        "strategy": "mean",
+        "columns": null,
+        "threshold": 0.0,
+        "fill_value": 0
+      },
+      "changes": {
+        "strategy": "mean",
+        "rows_before": 891,
+        "rows_after": 891,
+        "rows_dropped": 0,
+        "cols_before": 12,
+        "cols_after": 12,
+        "cols_dropped": 0,
+        "values_imputed": {
+          "Age": {
+            "count": 177,
+            "fill_value": 29.69911764705882
+          }
+        }
+      },
+      "applied_at": "2025-11-21T21:22:00.559640",
+      "shape_after": [
+        891,
+        12
+      ]
+    }
+  ],
+  "original_shape": [
+    891,
+    12
+  ],
+  "current_shape": [
+    891,
+    12
+  ]
+}

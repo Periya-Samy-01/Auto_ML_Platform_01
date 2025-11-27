@@ -1,0 +1,67 @@
+[tool.poetry]
+name = "automl-api"
+version = "0.1.0"
+description = "FastAPI backend for AutoML Platform"
+authors = ["Periya Samy"]
+readme = "README.md"
+packages = [{include = "app"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+# Web framework
+fastapi = "^0.115"
+uvicorn = {extras = ["standard"], version = "^0.32"}
+
+# Database
+sqlalchemy = "^2.0"
+psycopg2-binary = "^2.9"
+alembic = "^1.14"
+
+# Validation & Settings
+pydantic = "^2.9"
+pydantic-settings = "^2.6"
+email-validator = "^2.2"
+
+# Authentication
+python-jose = {extras = ["cryptography"], version = "^3.3"}
+passlib = {extras = ["bcrypt"], version = "^1.7"}
+bcrypt = "^4.2"
+
+# Redis
+redis = "^5.2"
+
+# HTTP client (for OAuth)
+httpx = "^0.28"
+
+# Utilities
+python-multipart = "^0.0.17"
+
+# Storage & Data Processing
+boto3 = "^1.40"
+polars = "^1.15"
+
+# Task Queue
+celery = "^5.5"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3"
+pytest-asyncio = "^0.24"
+httpx = "^0.28"
+ruff = "^0.8"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

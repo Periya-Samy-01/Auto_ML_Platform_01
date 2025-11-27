@@ -1,0 +1,5 @@
+# This just to remind me some commands
+
+Clear Cache
+for /d /r . %d in (__pycache__) do @if exist "%d" rd /s /q "%d"
+

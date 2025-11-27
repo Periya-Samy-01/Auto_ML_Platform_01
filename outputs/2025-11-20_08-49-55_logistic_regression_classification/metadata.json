@@ -1,0 +1,16 @@
+{
+  "name": "logistic_regression",
+  "task": "classification",
+  "hyperparameters": {
+    "C": 1.0,
+    "max_iter": 100,
+    "solver": "lbfgs"
+  },
+  "metadata": {
+    "created_at": "2025-11-20T08:49:55.143832",
+    "last_trained_at": "2025-11-20T08:49:55.189586",
+    "training_samples": 120,
+    "feature_count": 5,
+    "model_version": null
+  }
+}

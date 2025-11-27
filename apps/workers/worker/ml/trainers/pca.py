@@ -9,13 +9,13 @@ import numpy as np
 from sklearn.decomposition import PCA
 
 from .base import BaseTrainer
-from worker.constants import MODEL_TYPE_DIMENSIONALITY, TASK_DIMENSIONALITY_REDUCTION
-from worker.ml.utils.trainer_utils import (
+from apps.workers.worker.constants import MODEL_TYPE_DIMENSIONALITY, TASK_DIMENSIONALITY_REDUCTION
+from apps.workers.worker.ml.utils.trainer_utils import (
     validate_fit_input,
     validate_predict_input,
     check_model_fitted,
 )
-from worker.ml.utils.validation import validate_positive_integer
+from apps.workers.worker.ml.utils.validation import validate_positive_integer
 
 
 class PCATrainer(BaseTrainer):
