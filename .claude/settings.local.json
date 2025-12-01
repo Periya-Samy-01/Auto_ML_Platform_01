@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "Bash(python verify_jobs_system.py:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(python test_jobs_standalone.py:*)",
+      "Bash(mkdir:*)",
+      "Bash(touch:*)",
+      "Bash(pip install:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

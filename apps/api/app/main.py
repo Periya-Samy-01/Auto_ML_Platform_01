@@ -78,10 +78,14 @@ def create_app() -> FastAPI:
     from app.core.routes import router as core_router
     from app.auth.router import router as auth_router
     from app.datasets.router import router as datasets_router
-    
+    from app.jobs.router import router as jobs_router
+    from app.credits.router import router as credits_router
+
     app.include_router(core_router)
     app.include_router(auth_router, prefix="/api")
     app.include_router(datasets_router, prefix="/api", tags=["Datasets"])
+    app.include_router(jobs_router, prefix="/api", tags=["Jobs"])
+    app.include_router(credits_router, prefix="/api", tags=["Credits"])
     
     # Feature routers (will be added later)
     # from app.datasets.routes import router as datasets_router
