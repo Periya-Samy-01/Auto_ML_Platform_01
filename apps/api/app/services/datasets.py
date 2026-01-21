@@ -88,7 +88,8 @@ class DatasetService:
             name=name,
             description=description,
             problem_type=problem_type,
-            target_column=target_column
+            target_column=target_column,
+            is_sample_dataset=False  # User-uploaded datasets are not samples
             # current_version_id will be set when first version completes
         )
         
@@ -203,16 +204,17 @@ class DatasetService:
         datasets = query.offset(skip).limit(limit).all()
         
         # Cache results if no filters
-        if not search and not problem_type:
-            cache_data = {
-                'datasets': [d.__dict__ for d in datasets],
-                'total': total
-            }
-            cache_service.cache_user_datasets(
-                str(user_id), 
-                skip//limit, 
-                cache_data
-            )
+        # TODO: Fix caching - SQLAlchemy models need custom serialization
+        # if not search and not problem_type:
+        #     cache_data = {
+        #         'datasets': [d.__dict__ for d in datasets],
+        #         'total': total
+        #     }
+        #     cache_service.cache_user_datasets(
+        #         str(user_id), 
+        #         skip//limit, 
+        #         cache_data
+        #     )
         
         return datasets, total
     

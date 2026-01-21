@@ -40,7 +40,7 @@ class R2Service:
         self._ensure_bucket_exists()
     
     def _ensure_bucket_exists(self) -> None:
-        """Create bucket if it doesn't exist"""
+        """Create bucket if it doesn't exist and configure CORS"""
         try:
             self.client.head_bucket(Bucket=self.bucket_name)
             logger.info(f"R2 bucket '{self.bucket_name}' verified")
@@ -56,6 +56,31 @@ class R2Service:
             else:
                 logger.error(f"Error checking bucket: {e}")
                 raise
+        
+        # Configure CORS for browser uploads
+        self._configure_cors()
+    
+    def _configure_cors(self) -> None:
+        """Configure CORS rules for browser-based uploads"""
+        cors_configuration = {
+            'CORSRules': [
+                {
+                    'AllowedHeaders': ['*'],
+                    'AllowedMethods': ['GET', 'PUT', 'POST', 'DELETE', 'HEAD'],
+                    'AllowedOrigins': ['http://localhost:3000', 'http://127.0.0.1:3000'],
+                    'ExposeHeaders': ['ETag', 'Content-Length'],
+                    'MaxAgeSeconds': 3600
+                }
+            ]
+        }
+        try:
+            self.client.put_bucket_cors(
+                Bucket=self.bucket_name,
+                CORSConfiguration=cors_configuration
+            )
+            logger.info(f"CORS configured for bucket '{self.bucket_name}'")
+        except Exception as e:
+            logger.warning(f"Could not configure CORS (may already be set): {e}")
     
     def generate_presigned_upload_url(
         self, 
@@ -83,12 +108,13 @@ class R2Service:
         key = f"uploads/temp/{upload_id}{extension}"
         
         try:
+            # NOTE: We deliberately don't include ContentType in the signature
+            # This allows the frontend to send any content-type
             url = self.client.generate_presigned_url(
                 'put_object',
                 Params={
                     'Bucket': self.bucket_name,
                     'Key': key,
-                    'ContentType': content_type,
                 },
                 ExpiresIn=expires_in
             )

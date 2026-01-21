@@ -46,14 +46,15 @@ class Settings(BaseSettings):
     R2_SECRET_ACCESS_KEY: str = ""
     R2_BUCKET_NAME: str = "automl-datasets-production"
     
-    # Celery
-    CELERY_BROKER_URL: str = "redis://localhost:6379/0"
-    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/0"
+    # ARQ (Async Redis Queue) - uses REDIS_URL for connection
     
     # File Upload Limits
     MAX_UPLOAD_SIZE_MB_FREE: int = 100
     MAX_UPLOAD_SIZE_MB_PRO: int = 1000
     MAX_UPLOAD_SIZE_MB_ENTERPRISE: int = 5000
+    
+    # Frontend URL (for OAuth redirects)
+    FRONTEND_URL: str = "http://localhost:3000"
     
     # OAuth - Google
     GOOGLE_CLIENT_ID: str = ""

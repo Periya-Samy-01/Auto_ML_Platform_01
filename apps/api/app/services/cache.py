@@ -20,21 +20,36 @@ class CacheService:
     """Service for Redis cache operations"""
     
     def __init__(self):
-        """Initialize Redis client"""
-        self.redis_client = redis.from_url(
-            settings.REDIS_URL,
-            decode_responses=True
-        )
-        self._test_connection()
+        """Initialize Redis client with graceful fallback"""
+        self._available = False
+        self.redis_client = None
+        
+        try:
+            self.redis_client = redis.from_url(
+                settings.REDIS_URL,
+                decode_responses=True,
+                socket_connect_timeout=2,  # 2 second timeout
+                socket_timeout=2
+            )
+            self._test_connection()
+        except Exception as e:
+            logger.warning(f"Redis not available, caching disabled: {e}")
+    
+    @property
+    def available(self) -> bool:
+        """Check if cache is available"""
+        return self._available
     
     def _test_connection(self) -> None:
         """Test Redis connection on initialization"""
         try:
-            self.redis_client.ping()
-            logger.info("Redis cache connected successfully")
+            if self.redis_client:
+                self.redis_client.ping()
+                self._available = True
+                logger.info("Redis cache connected successfully")
         except RedisError as e:
-            logger.error(f"Failed to connect to Redis: {e}")
-            raise
+            logger.warning(f"Redis connection failed, caching disabled: {e}")
+            self._available = False
     
     # Schema Cache Operations
     def cache_schema(
@@ -45,6 +60,8 @@ class CacheService:
         ttl: int = 86400  # 24 hours
     ) -> None:
         """Cache dataset version schema"""
+        if not self._available:
+            return
         key = f"dataset:{dataset_id}:version:{version_id}:schema"
         try:
             self.redis_client.setex(
@@ -62,6 +79,8 @@ class CacheService:
         version_id: str
     ) -> Optional[Dict[str, Any]]:
         """Get cached dataset schema"""
+        if not self._available:
+            return None
         key = f"dataset:{dataset_id}:version:{version_id}:schema"
         try:
             data = self.redis_client.get(key)
@@ -81,6 +100,8 @@ class CacheService:
         ttl: int = 3600  # 1 hour
     ) -> None:
         """Cache dataset preview rows"""
+        if not self._available:
+            return
         key = f"dataset:{dataset_id}:version:{version_id}:preview"
         try:
             self.redis_client.setex(
@@ -98,6 +119,8 @@ class CacheService:
         version_id: str
     ) -> Optional[List[Dict[str, Any]]]:
         """Get cached dataset preview"""
+        if not self._available:
+            return None
         key = f"dataset:{dataset_id}:version:{version_id}:preview"
         try:
             data = self.redis_client.get(key)
@@ -274,5 +297,27 @@ class CacheService:
             logger.error(f"Failed to delete key {key}: {e}")
 
 
-# Singleton instance
-cache_service = CacheService()
+# Lazy singleton instance
+_cache_service: Optional[CacheService] = None
+
+
+def get_cache_service() -> CacheService:
+    """Get or create the cache service singleton"""
+    global _cache_service
+    if _cache_service is None:
+        _cache_service = CacheService()
+    return _cache_service
+
+
+# For backward compatibility - lazy property
+class _LazyCache:
+    """Lazy cache service wrapper"""
+    _instance: Optional[CacheService] = None
+    
+    def __getattr__(self, name):
+        if self._instance is None:
+            self._instance = CacheService()
+        return getattr(self._instance, name)
+
+cache_service = _LazyCache()
+

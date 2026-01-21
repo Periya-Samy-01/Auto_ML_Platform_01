@@ -4,9 +4,6 @@
 
 # Environment variables
 # Keep example files, but ignore local secrets
-.env
-.env.*
-!.env.example
 
 # Log files
 *.log
@@ -66,7 +63,7 @@ htmlcov/
 
 # Model artifacts
 # Trained models can be large and should not be versioned.
-models/
+#models/
 *.h5
 *.hdf5
 *.keras
@@ -110,5 +107,3 @@ site-packages/
 */site-packages/
 Architecture_Quick_Reference.pdf
 
-*/md
-*.md

@@ -5,15 +5,15 @@ Maps preprocessor names to preprocessor classes.
 """
 
 from typing import Dict, Type, List, Any, Optional
-from apps.workers.worker.ml.preprocessors.base import BasePreprocessor
-from apps.workers.worker.ml.preprocessors.duplicate_removal import DuplicateRemovalPreprocessor
-from apps.workers.worker.ml.preprocessors.data_type_conversion import DataTypeConversionPreprocessor
-from apps.workers.worker.ml.preprocessors.missing_value_imputation import MissingValueImputationPreprocessor
-from apps.workers.worker.ml.preprocessors.outlier_handling import OutlierHandlingPreprocessor
-from apps.workers.worker.ml.preprocessors.feature_scaling import FeatureScalingPreprocessor
-from apps.workers.worker.ml.preprocessors.one_hot_encoding import OneHotEncodingPreprocessor
-from apps.workers.worker.ml.preprocessors.ordinal_label_encoding import OrdinalLabelEncodingPreprocessor
-from apps.workers.worker.ml.preprocessors.datetime_feature_extraction import DatetimeFeatureExtractionPreprocessor
+from apps.api.app.ml.preprocessors.base import BasePreprocessor
+from apps.api.app.ml.preprocessors.duplicate_removal import DuplicateRemovalPreprocessor
+from apps.api.app.ml.preprocessors.data_type_conversion import DataTypeConversionPreprocessor
+from apps.api.app.ml.preprocessors.missing_value_imputation import MissingValueImputationPreprocessor
+from apps.api.app.ml.preprocessors.outlier_handling import OutlierHandlingPreprocessor
+from apps.api.app.ml.preprocessors.feature_scaling import FeatureScalingPreprocessor
+from apps.api.app.ml.preprocessors.one_hot_encoding import OneHotEncodingPreprocessor
+from apps.api.app.ml.preprocessors.ordinal_label_encoding import OrdinalLabelEncodingPreprocessor
+from apps.api.app.ml.preprocessors.datetime_feature_extraction import DatetimeFeatureExtractionPreprocessor
 
 
 # Mapping of preprocessor names to classes

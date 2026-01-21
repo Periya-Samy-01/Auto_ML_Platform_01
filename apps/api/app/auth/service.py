@@ -71,7 +71,7 @@ class AuthService:
         Returns:
             Tuple of (user, is_new_user)
         """
-        provider = OAuthProvider(oauth_info.provider.upper())
+        provider = OAuthProvider(oauth_info.provider.lower())
         
         # First, check if OAuth account already linked
         user = self.get_user_by_oauth(provider, oauth_info.provider_id)
@@ -100,7 +100,6 @@ class AuthService:
             oauth_id=oauth_info.provider_id,
             email_verified=oauth_info.email_verified,
             tier=UserTier.FREE,
-            credit_balance=settings.FREE_TIER_INITIAL_CREDITS,
         )
         self.db.add(user)
         self.db.commit()

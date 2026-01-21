@@ -8,7 +8,8 @@ import logging
 from typing import Optional, List
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from arq.connections import ArqRedis
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from pydantic import BaseModel, Field
@@ -18,11 +19,12 @@ from app.auth.dependencies import get_current_user
 from packages.database.models import User, Dataset, DatasetVersion, IngestionJob
 from packages.database.models.enums import ProblemType, FileFormat, UserTier
 from app.services import (
-    r2_service, 
-    dataset_service, 
+    r2_service,
+    dataset_service,
     ingestion_service,
-    cache_service
+    cache_service,
 )
+
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -70,6 +72,15 @@ class ConfirmUploadResponse(BaseModel):
     estimated_duration_seconds: int
 
 
+class ColumnMetadataResponse(BaseModel):
+    """Column metadata from profiling"""
+    name: str
+    dtype: str
+    null_count: int = 0
+    null_percentage: float = 0.0
+    unique_count: Optional[int] = None
+
+
 class DatasetResponse(BaseModel):
     """Dataset details response"""
     id: str
@@ -80,6 +91,8 @@ class DatasetResponse(BaseModel):
     current_version_id: Optional[str]
     row_count: Optional[int]
     column_count: Optional[int]
+    columns_metadata: Optional[List[ColumnMetadataResponse]] = None
+    file_size_bytes: Optional[int] = None
     created_at: datetime
     updated_at: datetime
 
@@ -162,11 +175,24 @@ async def generate_upload_url(
     )
 
 
+async def get_arq_pool(request: Request) -> ArqRedis:
+    """Dependency to get ARQ pool from app state"""
+    pool = request.app.state.arq_pool
+    if pool is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Background job processing is unavailable"
+        )
+    return pool
+
+
 @router.post("/confirm", response_model=ConfirmUploadResponse)
 async def confirm_upload(
     request: ConfirmUploadRequest,
+    http_request: Request,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    arq_pool: ArqRedis = Depends(get_arq_pool)
 ):
     """
     Confirm file upload and start processing job
@@ -175,15 +201,15 @@ async def confirm_upload(
     temp_key = f"uploads/temp/{request.upload_id}"
     file_extension = request.dataset_name.split('.')[-1] if '.' in request.dataset_name else 'csv'
     temp_key = f"{temp_key}.{file_extension}"
-    
+
     if not r2_service.check_file_exists(temp_key):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Upload not found. Please upload the file first."
         )
-    
+
     file_size = r2_service.get_file_size(temp_key)
-    
+
     # Create or get dataset
     if request.create_new_version:
         if not request.dataset_id:
@@ -191,10 +217,10 @@ async def confirm_upload(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="dataset_id is required when creating new version"
             )
-        
+
         dataset = dataset_service.get_dataset(
-            db, 
-            uuid.UUID(request.dataset_id), 
+            db,
+            uuid.UUID(request.dataset_id),
             current_user.id
         )
         if not dataset:
@@ -218,10 +244,10 @@ async def confirm_upload(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=str(e)
             )
-    
+
     # Detect file format
     file_format = ingestion_service.detect_file_format(request.dataset_name)
-    
+
     # Create version record
     version = dataset_service.create_dataset_version(
         db=db,
@@ -232,7 +258,7 @@ async def confirm_upload(
         original_format=file_format,
         version_label=request.version_label
     )
-    
+
     # Create ingestion job
     job = ingestion_service.create_ingestion_job(
         db=db,
@@ -243,27 +269,31 @@ async def confirm_upload(
         original_filename=request.dataset_name,
         original_size_bytes=file_size
     )
-    
-    # Queue Celery task
-    from app.tasks import process_dataset_ingestion
-    
-    task = process_dataset_ingestion.delay(str(job.id))
-    
-    # Update job with Celery task ID
+
+    # Queue job to ARQ worker
+    arq_job = await arq_pool.enqueue_job(
+        'handle_ingestion_job',
+        str(job.id)
+    )
+
+    # Update job status with ARQ job ID
+    arq_job_id = arq_job.job_id if arq_job else None
     ingestion_service.update_job_status(
         db=db,
         job_id=job.id,
         status="pending",
-        celery_task_id=task.id
+        celery_task_id=arq_job_id  # Reusing celery_task_id field for ARQ job ID
     )
-    
+
+    logger.info(f"Queued ingestion job {job.id} to ARQ (arq_job_id={arq_job_id})")
+
     # Estimate duration based on file size
     estimated_duration = 30  # Base 30 seconds
     if file_size > 10 * 1024 * 1024:  # >10MB
         estimated_duration = 60
     if file_size > 100 * 1024 * 1024:  # >100MB
         estimated_duration = 180
-    
+
     return ConfirmUploadResponse(
         job_id=str(job.id),
         dataset_id=str(dataset.id),
@@ -307,11 +337,39 @@ async def list_datasets(
         # Get current version info if available
         row_count = None
         column_count = None
-        
+        columns_metadata = None
+        file_size_bytes = None
+
         if dataset.current_version:
             row_count = dataset.current_version.row_count
             column_count = dataset.current_version.column_count
-        
+            file_size_bytes = dataset.current_version.parquet_size_bytes or dataset.current_version.original_size_bytes
+
+            # Parse columns_metadata from version
+            if dataset.current_version.columns_metadata:
+                try:
+                    raw_metadata = dataset.current_version.columns_metadata
+                    # Handle both formats: {"columns": [...]} or direct [...]
+                    if isinstance(raw_metadata, dict) and "columns" in raw_metadata:
+                        col_list = raw_metadata["columns"]
+                    elif isinstance(raw_metadata, list):
+                        col_list = raw_metadata
+                    else:
+                        col_list = []
+
+                    columns_metadata = [
+                        ColumnMetadataResponse(
+                            name=col.get("name", ""),
+                            dtype=col.get("dtype", "unknown"),
+                            null_count=col.get("null_count", 0),
+                            null_percentage=col.get("null_percentage", 0.0),
+                            unique_count=col.get("unique_count")
+                        )
+                        for col in col_list
+                    ]
+                except Exception as e:
+                    logger.warning(f"Failed to parse columns_metadata for dataset {dataset.id}: {e}")
+
         dataset_responses.append(DatasetResponse(
             id=str(dataset.id),
             name=dataset.name,
@@ -321,6 +379,8 @@ async def list_datasets(
             current_version_id=str(dataset.current_version_id) if dataset.current_version_id else None,
             row_count=row_count,
             column_count=column_count,
+            columns_metadata=columns_metadata,
+            file_size_bytes=file_size_bytes,
             created_at=dataset.created_at,
             updated_at=dataset.updated_at
         ))
@@ -357,15 +417,43 @@ async def get_dataset(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Dataset not found"
         )
-    
+
     # Get current version info
     row_count = None
     column_count = None
-    
+    columns_metadata = None
+    file_size_bytes = None
+
     if dataset.current_version:
         row_count = dataset.current_version.row_count
         column_count = dataset.current_version.column_count
-    
+        file_size_bytes = dataset.current_version.parquet_size_bytes or dataset.current_version.original_size_bytes
+
+        # Parse columns_metadata from version
+        if dataset.current_version.columns_metadata:
+            try:
+                raw_metadata = dataset.current_version.columns_metadata
+                # Handle both formats: {"columns": [...]} or direct [...]
+                if isinstance(raw_metadata, dict) and "columns" in raw_metadata:
+                    col_list = raw_metadata["columns"]
+                elif isinstance(raw_metadata, list):
+                    col_list = raw_metadata
+                else:
+                    col_list = []
+
+                columns_metadata = [
+                    ColumnMetadataResponse(
+                        name=col.get("name", ""),
+                        dtype=col.get("dtype", "unknown"),
+                        null_count=col.get("null_count", 0),
+                        null_percentage=col.get("null_percentage", 0.0),
+                        unique_count=col.get("unique_count")
+                    )
+                    for col in col_list
+                ]
+            except Exception as e:
+                logger.warning(f"Failed to parse columns_metadata for dataset {dataset.id}: {e}")
+
     return DatasetResponse(
         id=str(dataset.id),
         name=dataset.name,
@@ -375,6 +463,8 @@ async def get_dataset(
         current_version_id=str(dataset.current_version_id) if dataset.current_version_id else None,
         row_count=row_count,
         column_count=column_count,
+        columns_metadata=columns_metadata,
+        file_size_bytes=file_size_bytes,
         created_at=dataset.created_at,
         updated_at=dataset.updated_at
     )

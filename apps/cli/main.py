@@ -7,10 +7,10 @@ Supports supervised (classification, regression) and unsupervised (clustering, d
 
 import click
 import json
-from cli.commands.train import train_command
-from cli.commands.preprocess import preprocess_command
-from cli.utils.trainer_factory import list_available_algorithms
-from cli.utils.preprocessor_factory import (
+from apps.cli.commands.train import train_command
+from apps.cli.commands.preprocess import preprocess_command
+from apps.cli.utils.trainer_factory import list_available_algorithms
+from apps.cli.utils.preprocessor_factory import (
     list_available_preprocessors,
     get_preprocessor_info,
     PREPROCESSOR_DESCRIPTIONS

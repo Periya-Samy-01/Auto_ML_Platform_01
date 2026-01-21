@@ -41,6 +41,23 @@ poetry run alembic upgrade head
 poetry run uvicorn app.main:app --reload --port 8000
 ```
 
+### 5. Start the ARQ Worker
+
+The ARQ worker processes background jobs like dataset ingestion. Run it in a separate terminal:
+
+```bash
+cd apps/api
+poetry run arq app.worker.WorkerSettings
+```
+
+**Worker Configuration:**
+- Max concurrent jobs: 10
+- Job timeout: 30 minutes
+- Max retries: 3
+- Queue name: `arq:queue`
+
+The worker will automatically connect to Redis using the `REDIS_URL` environment variable.
+
 ## Project Structure
 
 ```
@@ -56,11 +73,15 @@ apps/api/
 │   ├── jobs/            # Jobs module
 │   ├── models/          # Trained models module
 │   ├── workflows/       # Workflows module
+│   ├── services/        # Business logic services
+│   │   ├── ingestion_processor.py  # Dataset ingestion logic
+│   │   └── ...
 │   ├── core/            # Core utilities
 │   │   ├── config.py    # Settings
 │   │   ├── database.py  # DB session
 │   │   └── routes.py    # Health checks
-│   └── main.py          # App entry point
+│   ├── main.py          # App entry point
+│   └── worker.py        # ARQ worker for background jobs
 ├── tests/               # Test suite
 ├── alembic.ini          # Alembic config
 ├── pyproject.toml       # Dependencies

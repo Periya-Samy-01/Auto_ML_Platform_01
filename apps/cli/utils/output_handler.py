@@ -14,8 +14,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import confusion_matrix
 
-from apps.workers.worker.ml.trainers.base import BaseTrainer
-from apps.workers.worker.constants import (
+from apps.api.app.ml.trainers.base import BaseTrainer
+from apps.api.app.ml.constants import (
     TASK_CLASSIFICATION, 
     TASK_REGRESSION,
     TASK_CLUSTERING,

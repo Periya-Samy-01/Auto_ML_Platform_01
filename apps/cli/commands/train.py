@@ -8,18 +8,18 @@ Supports both supervised and unsupervised learning tasks.
 from typing import Optional
 import numpy as np
 
-from cli.utils.data_loader import load_and_split_data
-from cli.utils.trainer_factory import get_trainer, is_supervised_trainer
-from cli.utils.output_handler import save_all_outputs
-from apps.workers.worker.constants import (
+from apps.cli.utils.data_loader import load_and_split_data
+from apps.cli.utils.trainer_factory import get_trainer, is_supervised_trainer
+from apps.cli.utils.output_handler import save_all_outputs
+from apps.api.app.ml.constants import (
     TASK_CLASSIFICATION, 
     TASK_REGRESSION,
     TASK_CLUSTERING,
     TASK_DIMENSIONALITY_REDUCTION
 )
-from apps.workers.worker.ml.evaluators.classification_evaluator import ClassificationEvaluator
-from apps.workers.worker.ml.evaluators.regression_evaluator import RegressionEvaluator
-from apps.workers.worker.ml.evaluators.clustering_evaluator import ClusteringEvaluator
+from apps.api.app.ml.evaluators.classification_evaluator import ClassificationEvaluator
+from apps.api.app.ml.evaluators.regression_evaluator import RegressionEvaluator
+from apps.api.app.ml.evaluators.clustering_evaluator import ClusteringEvaluator
 
 
 def train_command(
@@ -159,11 +159,16 @@ def train_command(
             metrics = evaluator.evaluate(X, y_pred, inertia=inertia)
         
         # Step 7: Save outputs
+        # Prepare predictions for output (use test predictions for supervised tasks if available)
+        y_pred_to_save = y_pred
+        if task in {TASK_CLASSIFICATION, TASK_REGRESSION} and 'y_pred_test' in locals():
+            y_pred_to_save = y_pred_test
+
         print(f"\n💾 Saving results...")
         output_dir = save_all_outputs(
             trainer=trainer,
             y_test=y_test if task in {TASK_CLASSIFICATION, TASK_REGRESSION} else None,
-            y_pred=y_pred,
+            y_pred=y_pred_to_save,
             metrics=metrics,
             algorithm=algorithm,
             task=task,

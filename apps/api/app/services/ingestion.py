@@ -308,7 +308,8 @@ class IngestionService:
             '.xls': FileFormat.EXCEL
         }
         
-        return format_map.get(extension, FileFormat.UNKNOWN)
+        # Default to CSV for unknown extensions (UNKNOWN is not a valid DB enum value)
+        return format_map.get(extension, FileFormat.CSV)
     
     @staticmethod
     def load_dataframe(

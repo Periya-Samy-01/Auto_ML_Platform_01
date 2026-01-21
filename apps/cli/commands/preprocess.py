@@ -8,8 +8,8 @@ from typing import Optional, Dict, Any
 import json
 from pathlib import Path
 
-from apps.workers.worker.ml.preprocessors.base import DataContainer
-from cli.utils.preprocessor_factory import get_preprocessor, get_preprocessor_info
+from apps.api.app.ml.preprocessors.base import DataContainer
+from apps.cli.utils.preprocessor_factory import get_preprocessor, get_preprocessor_info
 
 
 def preprocess_command(

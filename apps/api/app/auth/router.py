@@ -93,51 +93,40 @@ async def google_callback(
     Handle Google OAuth callback.
     
     Exchanges authorization code for user info, creates/finds user,
-    and returns JWT tokens.
+    and redirects to frontend with JWT tokens.
     """
+    frontend_callback = f"{settings.FRONTEND_URL}/auth/callback"
+    
     if error:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Google OAuth error: {error}",
+        return RedirectResponse(
+            url=f"{frontend_callback}?error={error}"
         )
     
     # Verify state (CSRF protection)
     if not state:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Missing state parameter",
+        return RedirectResponse(
+            url=f"{frontend_callback}?error=missing_state"
         )
     
     state_valid = await redis.verify_and_delete_oauth_state(state)
     if not state_valid:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired state parameter",
+        return RedirectResponse(
+            url=f"{frontend_callback}?error=invalid_state"
         )
     
     try:
         oauth_info = await exchange_google_code(code)
     except OAuthError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
+        return RedirectResponse(
+            url=f"{frontend_callback}?error=oauth_failed&message={str(e)}"
         )
     
     service = AuthService(db)
     access_token, refresh_token, user, is_new = service.authenticate_oauth(oauth_info)
     
-    # In production, redirect to frontend with tokens in URL fragment
-    # For now, return JSON response
-    return AuthResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        user=UserBrief(
-            id=user.id,
-            email=user.email,
-            full_name=user.full_name,
-            tier=user.tier.value,
-            credit_balance=user.credit_balance,
-        ),
+    # Redirect to frontend with tokens
+    return RedirectResponse(
+        url=f"{frontend_callback}?access_token={access_token}&refresh_token={refresh_token}&is_new={str(is_new).lower()}"
     )
 
 
@@ -184,50 +173,41 @@ async def github_callback(
     Handle GitHub OAuth callback.
     
     Exchanges authorization code for user info, creates/finds user,
-    and returns JWT tokens.
+    and redirects to frontend with JWT tokens.
     """
+    frontend_callback = f"{settings.FRONTEND_URL}/auth/callback"
+    
     if error:
         detail = error_description or error
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"GitHub OAuth error: {detail}",
+        return RedirectResponse(
+            url=f"{frontend_callback}?error={detail}"
         )
     
     # Verify state (CSRF protection)
     if not state:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Missing state parameter",
+        return RedirectResponse(
+            url=f"{frontend_callback}?error=missing_state"
         )
     
     state_valid = await redis.verify_and_delete_oauth_state(state)
     if not state_valid:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired state parameter",
+        return RedirectResponse(
+            url=f"{frontend_callback}?error=invalid_state"
         )
     
     try:
         oauth_info = await exchange_github_code(code)
     except OAuthError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
+        return RedirectResponse(
+            url=f"{frontend_callback}?error=oauth_failed&message={str(e)}"
         )
     
     service = AuthService(db)
     access_token, refresh_token, user, is_new = service.authenticate_oauth(oauth_info)
     
-    return AuthResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        user=UserBrief(
-            id=user.id,
-            email=user.email,
-            full_name=user.full_name,
-            tier=user.tier.value,
-            credit_balance=user.credit_balance,
-        ),
+    # Redirect to frontend with tokens
+    return RedirectResponse(
+        url=f"{frontend_callback}?access_token={access_token}&refresh_token={refresh_token}&is_new={str(is_new).lower()}"
     )
 
 
@@ -318,7 +298,6 @@ async def get_me(
         email=current_user.email,
         full_name=current_user.full_name,
         tier=current_user.tier.value,
-        credit_balance=current_user.credit_balance,
         email_verified=current_user.email_verified,
         oauth_provider=current_user.oauth_provider.value if current_user.oauth_provider else None,
         created_at=current_user.created_at,
@@ -368,7 +347,6 @@ async def dev_login(
             email=request.email,
             full_name=request.full_name or request.email.split("@")[0],
             tier=UserTier.FREE,
-            credit_balance=settings.FREE_TIER_INITIAL_CREDITS,
             email_verified=True,  # Auto-verify in dev mode
         )
         db.add(user)
@@ -387,7 +365,6 @@ async def dev_login(
             email=user.email,
             full_name=user.full_name,
             tier=user.tier.value,
-            credit_balance=user.credit_balance,
         ),
     )
 

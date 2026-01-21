@@ -54,6 +54,38 @@ async def database_health_check(db: Session = Depends(get_db)):
         }
 
 
+@router.get("/health/redis")
+async def redis_health_check():
+    """
+    Redis health check.
+    Verifies Redis connectivity.
+    """
+    try:
+        from app.auth.redis import redis_client
+        
+        is_connected = await redis_client.ping()
+        
+        if is_connected:
+            return {
+                "status": "healthy",
+                "redis": "connected",
+                "timestamp": datetime.now(UTC).isoformat(),
+            }
+        else:
+            return {
+                "status": "unhealthy",
+                "redis": "disconnected",
+                "timestamp": datetime.now(UTC).isoformat(),
+            }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "redis": "disconnected",
+            "error": str(e),
+            "timestamp": datetime.now(UTC).isoformat(),
+        }
+
+
 @router.get("/")
 async def root():
     """

@@ -39,7 +39,6 @@ class JobResponse(BaseModel):
     workflow_snapshot_id: Optional[uuid.UUID] = None
     status: str
     priority: int
-    credits_cost: int
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     duration_seconds: Optional[int] = None
@@ -55,7 +54,6 @@ class JobBrief(BaseModel):
     id: uuid.UUID
     status: str
     priority: int
-    credits_cost: int
     created_at: datetime
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
@@ -108,8 +106,6 @@ class JobLogsResponse(BaseModel):
 class JobCancelResponse(BaseModel):
     """Response after cancelling a job"""
     job: JobResponse
-    refund_amount: int
-    refund_percentage: float
     message: str
 
 
@@ -132,6 +128,5 @@ class JobStatsResponse(BaseModel):
     completed_jobs: int
     failed_jobs: int
     cancelled_jobs: int
-    total_credits_spent: int
     average_duration_seconds: Optional[float] = None
     success_rate: Optional[float] = None

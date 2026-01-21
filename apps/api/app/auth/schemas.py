@@ -53,7 +53,6 @@ class UserResponse(UserBase):
     """User response schema"""
     id: uuid.UUID
     tier: str
-    credit_balance: int
     email_verified: bool
     oauth_provider: Optional[str] = None
     created_at: datetime
@@ -73,7 +72,6 @@ class UserBrief(BaseModel):
     email: EmailStr
     full_name: Optional[str] = None
     tier: str
-    credit_balance: int
     
     model_config = {"from_attributes": True}
 

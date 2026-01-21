@@ -41,8 +41,13 @@ python-multipart = "^0.0.17"
 boto3 = "^1.40"
 polars = "^1.15"
 
-# Task Queue
-celery = "^5.5"
+# Task Queue (ARQ - async Redis queue)
+arq = "^0.26"
+numpy = "^2.3.5"
+pandas = "^2.3.3"
+scikit-learn = "^1.8.0"
+matplotlib = "^3.10.8"
+seaborn = "^0.13.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3"

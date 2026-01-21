@@ -67,15 +67,12 @@ async def create_new_job(
 
     This endpoint will:
     1. Validate the workflow snapshot exists and belongs to the user
-    2. Calculate the estimated credit cost based on workflow complexity
-    3. Check if user has sufficient credits
-    4. Atomically create the job and deduct credits
-    5. Queue the job for execution in Celery
+    2. Create the job record
+    3. Queue the job for execution
 
     **Returns:**
     - 201: Job created successfully
     - 400: Invalid workflow
-    - 402: Insufficient credits
     - 404: Workflow snapshot not found
     """
     logger.info(
@@ -90,7 +87,7 @@ async def create_new_job(
     )
 
     logger.info(
-        f"Job {job.id} created successfully (cost: {job.credits_cost} credits)"
+        f"Job {job.id} created successfully"
     )
 
     return job
@@ -175,40 +172,25 @@ async def cancel_job_endpoint(
 
     This endpoint will:
     1. Verify the job is cancellable (pending/queued/running)
-    2. Revoke the Celery task if it's running
-    3. Calculate refund amount with penalty based on cancellation history
-    4. Issue credit refund
-    5. Update job status to cancelled
-
-    **Refund Policy:**
-    - 0 cancellations in last 30 days: 100% refund
-    - 5 cancellations in last 30 days: 75% refund
-    - 10+ cancellations in last 30 days: 50% refund (minimum)
+    2. Update job status to cancelled
 
     **Returns:**
-    - 200: Job cancelled successfully with refund details
+    - 200: Job cancelled successfully
     - 400: Job cannot be cancelled (already completed/failed)
     - 404: Job not found
     """
     logger.info(f"User {current_user.id} cancelling job {job_id}")
 
-    job, refund_amount, refund_percentage = cancel_job(
+    job, _, _ = cancel_job(
         db=db, user=current_user, job_id=job_id
     )
 
-    message = (
-        f"Job cancelled successfully. "
-        f"Refunded {refund_amount} credits ({refund_percentage * 100:.0f}%)"
-    )
+    message = "Job cancelled successfully."
 
-    logger.info(
-        f"Job {job_id} cancelled (refund: {refund_amount} credits, {refund_percentage * 100:.0f}%)"
-    )
+    logger.info(f"Job {job_id} cancelled")
 
     return JobCancelResponse(
         job=JobResponse.model_validate(job),
-        refund_amount=refund_amount,
-        refund_percentage=refund_percentage,
         message=message,
     )
 
@@ -224,15 +206,12 @@ async def retry_job_endpoint(
 
     This endpoint will:
     1. Verify the original job failed
-    2. Check if user has sufficient credits
-    3. Create a new job with the same workflow snapshot
-    4. Deduct credits for the new job
-    5. Queue the new job for execution
+    2. Create a new job with the same workflow snapshot
+    3. Queue the new job for execution
 
     **Returns:**
     - 201: New job created successfully
     - 400: Original job is not failed
-    - 402: Insufficient credits for retry
     - 404: Original job not found
     """
     logger.info(f"User {current_user.id} retrying job {job_id}")

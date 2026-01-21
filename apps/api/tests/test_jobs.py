@@ -3,7 +3,7 @@ Tests for Job API endpoints
 """
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from unittest.mock import Mock, patch
 
 import pytest
@@ -23,23 +23,6 @@ from packages.database.models.enums import (
     TransactionType,
     UserTier,
 )
-
-
-@pytest.fixture
-def test_user(db_session: Session):
-    """Create a test user with credits."""
-    user = User(
-        email="testuser@example.com",
-        password_hash="hashed_password",
-        full_name="Test User",
-        tier=UserTier.FREE,
-        credit_balance=1000,
-        email_verified=True,
-    )
-    db_session.add(user)
-    db_session.commit()
-    db_session.refresh(user)
-    return user
 
 
 @pytest.fixture
@@ -102,32 +85,19 @@ def test_workflow_snapshot(db_session: Session, test_user: User, test_workflow: 
     return snapshot
 
 
-@pytest.fixture
-def auth_headers(test_user: User):
-    """Mock authentication headers."""
-    # In real tests, you'd generate a valid JWT token
-    # For now, we'll mock the auth dependency
-    return {"Authorization": f"Bearer mock_token_{test_user.id}"}
-
-
 class TestJobCreation:
     """Test job creation endpoint."""
 
     @patch("app.jobs.service.queue_job_execution")
-    @patch("app.auth.dependencies.get_current_user")
     def test_create_job_success(
         self,
-        mock_get_user,
         mock_queue,
-        client,
+        authenticated_client,
         db_session,
         test_user,
         test_workflow_snapshot,
-        auth_headers,
     ):
         """Test successful job creation."""
-        mock_get_user.return_value = test_user
-
         # Add initial credits
         transaction = CreditTransaction(
             user_id=test_user.id,
@@ -139,13 +109,12 @@ class TestJobCreation:
         db_session.add(transaction)
         db_session.commit()
 
-        response = client.post(
+        response = authenticated_client.post(
             "/api/jobs",
             json={
                 "workflow_snapshot_id": str(test_workflow_snapshot.id),
                 "priority": 5,
             },
-            headers=auth_headers,
         )
 
         assert response.status_code == status.HTTP_201_CREATED
@@ -155,48 +124,36 @@ class TestJobCreation:
         assert data["credits_cost"] > 0
         assert mock_queue.called
 
-    @patch("app.auth.dependencies.get_current_user")
     def test_create_job_insufficient_credits(
         self,
-        mock_get_user,
-        client,
+        authenticated_client,
         db_session,
         test_user,
         test_workflow_snapshot,
-        auth_headers,
     ):
         """Test job creation with insufficient credits."""
-        mock_get_user.return_value = test_user
-
         # User has 0 credits by default
-        response = client.post(
+        response = authenticated_client.post(
             "/api/jobs",
             json={
                 "workflow_snapshot_id": str(test_workflow_snapshot.id),
             },
-            headers=auth_headers,
         )
 
         assert response.status_code == status.HTTP_402_PAYMENT_REQUIRED
         assert "Insufficient credits" in response.json()["detail"]
 
-    @patch("app.auth.dependencies.get_current_user")
     def test_create_job_invalid_snapshot(
         self,
-        mock_get_user,
-        client,
+        authenticated_client,
         test_user,
-        auth_headers,
     ):
         """Test job creation with invalid snapshot ID."""
-        mock_get_user.return_value = test_user
-
-        response = client.post(
+        response = authenticated_client.post(
             "/api/jobs",
             json={
                 "workflow_snapshot_id": str(uuid.uuid4()),  # Random UUID
             },
-            headers=auth_headers,
         )
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -205,18 +162,13 @@ class TestJobCreation:
 class TestJobListing:
     """Test job listing endpoint."""
 
-    @patch("app.auth.dependencies.get_current_user")
     def test_list_jobs_empty(
         self,
-        mock_get_user,
-        client,
+        authenticated_client,
         test_user,
-        auth_headers,
     ):
         """Test listing jobs when none exist."""
-        mock_get_user.return_value = test_user
-
-        response = client.get("/api/jobs", headers=auth_headers)
+        response = authenticated_client.get("/api/jobs")
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -225,19 +177,14 @@ class TestJobListing:
         assert data["page"] == 1
         assert data["has_more"] is False
 
-    @patch("app.auth.dependencies.get_current_user")
     def test_list_jobs_with_data(
         self,
-        mock_get_user,
-        client,
+        authenticated_client,
         db_session,
         test_user,
         test_workflow_snapshot,
-        auth_headers,
     ):
         """Test listing jobs with existing data."""
-        mock_get_user.return_value = test_user
-
         # Create test jobs
         for i in range(3):
             job = Job(
@@ -249,26 +196,21 @@ class TestJobListing:
             db_session.add(job)
         db_session.commit()
 
-        response = client.get("/api/jobs", headers=auth_headers)
+        response = authenticated_client.get("/api/jobs")
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["total"] == 3
         assert len(data["items"]) == 3
 
-    @patch("app.auth.dependencies.get_current_user")
     def test_list_jobs_with_filter(
         self,
-        mock_get_user,
-        client,
+        authenticated_client,
         db_session,
         test_user,
         test_workflow_snapshot,
-        auth_headers,
     ):
         """Test listing jobs with status filter."""
-        mock_get_user.return_value = test_user
-
         # Create jobs with different statuses
         job1 = Job(
             user_id=test_user.id,
@@ -285,29 +227,21 @@ class TestJobListing:
         db_session.add_all([job1, job2])
         db_session.commit()
 
-        response = client.get(
-            "/api/jobs?status_filter=completed",
-            headers=auth_headers,
-        )
+        response = authenticated_client.get("/api/jobs?status_filter=completed")
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["total"] == 1
         assert data["items"][0]["status"] == "completed"
 
-    @patch("app.auth.dependencies.get_current_user")
     def test_list_jobs_pagination(
         self,
-        mock_get_user,
-        client,
+        authenticated_client,
         db_session,
         test_user,
         test_workflow_snapshot,
-        auth_headers,
     ):
         """Test job listing pagination."""
-        mock_get_user.return_value = test_user
-
         # Create 10 jobs
         for i in range(10):
             job = Job(
@@ -320,10 +254,7 @@ class TestJobListing:
         db_session.commit()
 
         # Page 1
-        response = client.get(
-            "/api/jobs?page=1&page_size=5",
-            headers=auth_headers,
-        )
+        response = authenticated_client.get("/api/jobs?page=1&page_size=5")
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["total"] == 10
@@ -331,10 +262,7 @@ class TestJobListing:
         assert data["has_more"] is True
 
         # Page 2
-        response = client.get(
-            "/api/jobs?page=2&page_size=5",
-            headers=auth_headers,
-        )
+        response = authenticated_client.get("/api/jobs?page=2&page_size=5")
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert len(data["items"]) == 5
@@ -344,32 +272,27 @@ class TestJobListing:
 class TestJobDetails:
     """Test job details endpoint."""
 
-    @patch("app.auth.dependencies.get_current_user")
     def test_get_job_success(
         self,
-        mock_get_user,
-        client,
+        authenticated_client,
         db_session,
         test_user,
         test_workflow_snapshot,
-        auth_headers,
     ):
         """Test getting job details."""
-        mock_get_user.return_value = test_user
-
         job = Job(
             user_id=test_user.id,
             workflow_snapshot_id=test_workflow_snapshot.id,
             status=JobStatus.COMPLETED,
             credits_cost=150,
-            started_at=datetime.utcnow(),
-            completed_at=datetime.utcnow(),
+            started_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(timezone.utc),
             duration_seconds=120,
         )
         db_session.add(job)
         db_session.commit()
 
-        response = client.get(f"/api/jobs/{job.id}", headers=auth_headers)
+        response = authenticated_client.get(f"/api/jobs/{job.id}")
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -378,21 +301,13 @@ class TestJobDetails:
         assert data["credits_cost"] == 150
         assert data["duration_seconds"] == 120
 
-    @patch("app.auth.dependencies.get_current_user")
     def test_get_job_not_found(
         self,
-        mock_get_user,
-        client,
+        authenticated_client,
         test_user,
-        auth_headers,
     ):
         """Test getting non-existent job."""
-        mock_get_user.return_value = test_user
-
-        response = client.get(
-            f"/api/jobs/{uuid.uuid4()}",
-            headers=auth_headers,
-        )
+        response = authenticated_client.get(f"/api/jobs/{uuid.uuid4()}")
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
@@ -401,20 +316,15 @@ class TestJobCancellation:
     """Test job cancellation endpoint."""
 
     @patch("app.jobs.service.revoke_celery_task")
-    @patch("app.auth.dependencies.get_current_user")
     def test_cancel_job_success(
         self,
-        mock_get_user,
         mock_revoke,
-        client,
+        authenticated_client,
         db_session,
         test_user,
         test_workflow_snapshot,
-        auth_headers,
     ):
         """Test successful job cancellation."""
-        mock_get_user.return_value = test_user
-
         # Create running job
         job = Job(
             user_id=test_user.id,
@@ -426,10 +336,7 @@ class TestJobCancellation:
         db_session.add(job)
         db_session.commit()
 
-        response = client.post(
-            f"/api/jobs/{job.id}/cancel",
-            headers=auth_headers,
-        )
+        response = authenticated_client.post(f"/api/jobs/{job.id}/cancel")
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -438,19 +345,14 @@ class TestJobCancellation:
         assert data["refund_percentage"] > 0
         assert mock_revoke.called
 
-    @patch("app.auth.dependencies.get_current_user")
     def test_cancel_completed_job(
         self,
-        mock_get_user,
-        client,
+        authenticated_client,
         db_session,
         test_user,
         test_workflow_snapshot,
-        auth_headers,
     ):
         """Test cancelling already completed job."""
-        mock_get_user.return_value = test_user
-
         job = Job(
             user_id=test_user.id,
             workflow_snapshot_id=test_workflow_snapshot.id,
@@ -460,10 +362,7 @@ class TestJobCancellation:
         db_session.add(job)
         db_session.commit()
 
-        response = client.post(
-            f"/api/jobs/{job.id}/cancel",
-            headers=auth_headers,
-        )
+        response = authenticated_client.post(f"/api/jobs/{job.id}/cancel")
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
@@ -472,20 +371,15 @@ class TestJobRetry:
     """Test job retry endpoint."""
 
     @patch("app.jobs.service.queue_job_execution")
-    @patch("app.auth.dependencies.get_current_user")
     def test_retry_job_success(
         self,
-        mock_get_user,
         mock_queue,
-        client,
+        authenticated_client,
         db_session,
         test_user,
         test_workflow_snapshot,
-        auth_headers,
     ):
         """Test successful job retry."""
-        mock_get_user.return_value = test_user
-
         # Add credits
         transaction = CreditTransaction(
             user_id=test_user.id,
@@ -506,10 +400,7 @@ class TestJobRetry:
         db_session.add(failed_job)
         db_session.commit()
 
-        response = client.post(
-            f"/api/jobs/{failed_job.id}/retry",
-            headers=auth_headers,
-        )
+        response = authenticated_client.post(f"/api/jobs/{failed_job.id}/retry")
 
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
@@ -517,19 +408,14 @@ class TestJobRetry:
         assert data["new_job"]["id"] != str(failed_job.id)
         assert mock_queue.called
 
-    @patch("app.auth.dependencies.get_current_user")
     def test_retry_running_job(
         self,
-        mock_get_user,
-        client,
+        authenticated_client,
         db_session,
         test_user,
         test_workflow_snapshot,
-        auth_headers,
     ):
         """Test retrying a non-failed job."""
-        mock_get_user.return_value = test_user
-
         job = Job(
             user_id=test_user.id,
             workflow_snapshot_id=test_workflow_snapshot.id,
@@ -539,10 +425,7 @@ class TestJobRetry:
         db_session.add(job)
         db_session.commit()
 
-        response = client.post(
-            f"/api/jobs/{job.id}/retry",
-            headers=auth_headers,
-        )
+        response = authenticated_client.post(f"/api/jobs/{job.id}/retry")
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
@@ -550,19 +433,14 @@ class TestJobRetry:
 class TestJobLogs:
     """Test job logs endpoint."""
 
-    @patch("app.auth.dependencies.get_current_user")
     def test_get_job_logs(
         self,
-        mock_get_user,
-        client,
+        authenticated_client,
         db_session,
         test_user,
         test_workflow_snapshot,
-        auth_headers,
     ):
         """Test getting job execution logs."""
-        mock_get_user.return_value = test_user
-
         # Create job
         job = Job(
             user_id=test_user.id,
@@ -578,27 +456,24 @@ class TestJobLogs:
             job_id=job.id,
             node_id="node1",
             node_type=NodeType.DATASET,
-            status=NodeStatus.COMPLETED,
-            started_at=datetime.utcnow(),
-            completed_at=datetime.utcnow(),
+            status=NodeStatus.SUCCESS,
+            started_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(timezone.utc),
             duration_seconds=10,
         )
         node2 = JobNode(
             job_id=job.id,
             node_id="node2",
             node_type=NodeType.MODEL,
-            status=NodeStatus.COMPLETED,
-            started_at=datetime.utcnow(),
-            completed_at=datetime.utcnow(),
+            status=NodeStatus.SUCCESS,
+            started_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(timezone.utc),
             duration_seconds=60,
         )
         db_session.add_all([node1, node2])
         db_session.commit()
 
-        response = client.get(
-            f"/api/jobs/{job.id}/logs",
-            headers=auth_headers,
-        )
+        response = authenticated_client.get(f"/api/jobs/{job.id}/logs")
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -610,19 +485,14 @@ class TestJobLogs:
 class TestJobStats:
     """Test job statistics endpoint."""
 
-    @patch("app.auth.dependencies.get_current_user")
     def test_get_job_stats(
         self,
-        mock_get_user,
-        client,
+        authenticated_client,
         db_session,
         test_user,
         test_workflow_snapshot,
-        auth_headers,
     ):
         """Test getting job statistics."""
-        mock_get_user.return_value = test_user
-
         # Create various jobs
         jobs_data = [
             (JobStatus.COMPLETED, 100),
@@ -631,18 +501,18 @@ class TestJobStats:
             (JobStatus.RUNNING, 120),
         ]
 
-        for status, cost in jobs_data:
+        for job_status, cost in jobs_data:
             job = Job(
                 user_id=test_user.id,
                 workflow_snapshot_id=test_workflow_snapshot.id,
-                status=status,
+                status=job_status,
                 credits_cost=cost,
-                duration_seconds=60 if status == JobStatus.COMPLETED else None,
+                duration_seconds=60 if job_status == JobStatus.COMPLETED else None,
             )
             db_session.add(job)
         db_session.commit()
 
-        response = client.get("/api/jobs/stats/summary", headers=auth_headers)
+        response = authenticated_client.get("/api/jobs/stats/summary")
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()

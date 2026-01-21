@@ -6,17 +6,17 @@ Supports supervised and unsupervised trainers.
 """
 
 from typing import Dict, Type
-from apps.workers.worker.ml.trainers.base import BaseTrainer
-from apps.workers.worker.ml.trainers.decision_tree import DecisionTreeTrainer
-from apps.workers.worker.ml.trainers.logistic_regression import LogisticRegressionTrainer
-from apps.workers.worker.ml.trainers.random_forest import RandomForestTrainer
-from apps.workers.worker.ml.trainers.xgboost import XGBoostTrainer
-from apps.workers.worker.ml.trainers.knn import KNNTrainer
-from apps.workers.worker.ml.trainers.naive_bayes import NaiveBayesTrainer
-from apps.workers.worker.ml.trainers.linear_regression import LinearRegressionTrainer
-from apps.workers.worker.ml.trainers.neural_network import NeuralNetworkTrainer
-from apps.workers.worker.ml.trainers.pca import PCATrainer
-from apps.workers.worker.ml.trainers.kmeans import KMeansTrainer
+from apps.api.app.ml.trainers.base import BaseTrainer
+from apps.api.app.ml.trainers.decision_tree import DecisionTreeTrainer
+from apps.api.app.ml.trainers.logistic_regression import LogisticRegressionTrainer
+from apps.api.app.ml.trainers.random_forest import RandomForestTrainer
+from apps.api.app.ml.trainers.xgboost import XGBoostTrainer
+from apps.api.app.ml.trainers.knn import KNNTrainer
+from apps.api.app.ml.trainers.naive_bayes import NaiveBayesTrainer
+from apps.api.app.ml.trainers.linear_regression import LinearRegressionTrainer
+from apps.api.app.ml.trainers.neural_network import NeuralNetworkTrainer
+from apps.api.app.ml.trainers.pca import PCATrainer
+from apps.api.app.ml.trainers.kmeans import KMeansTrainer
 
 
 # Supervised trainers (classification & regression)

@@ -7,7 +7,18 @@
       "Bash(python test_jobs_standalone.py:*)",
       "Bash(mkdir:*)",
       "Bash(touch:*)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(python:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(find:*)",
+      "Bash(tree:*)",
+      "Bash(npm run test:run:*)",
+      "Bash(cd:*)",
+      "Bash(rm:*)",
+      "Bash(powershell -Command \"Remove-Item -Path ''C:\\Folders\\AutoML Platform 2.0\\apps\\workers'' -Recurse -Force\")",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []
