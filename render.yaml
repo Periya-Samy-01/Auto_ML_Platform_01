@@ -1,0 +1,85 @@
+# Render Blueprint for AutoML Platform
+# This file defines all services for deployment
+
+services:
+  # FastAPI Backend
+  - type: web
+    name: automl-api
+    runtime: python
+    region: oregon
+    rootDir: apps/api
+    buildCommand: pip install poetry && poetry install --no-root
+    startCommand: poetry run uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: automl-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: automl-redis
+          type: redis
+          property: connectionString
+      - key: CORS_ORIGINS
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ENDPOINT_URL
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET_NAME
+        sync: false
+    healthCheckPath: /health
+
+  # ARQ Background Worker
+  - type: worker
+    name: automl-worker
+    runtime: python
+    region: oregon
+    rootDir: apps/api
+    buildCommand: pip install poetry && poetry install --no-root
+    startCommand: poetry run arq app.worker.WorkerSettings
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: automl-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: automl-redis
+          type: redis
+          property: connectionString
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ENDPOINT_URL
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET_NAME
+        sync: false
+
+databases:
+  - name: automl-postgres
+    plan: free
+    region: oregon
+
+# Note: Redis is created separately as Render doesn't support Redis in blueprints for free tier

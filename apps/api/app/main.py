@@ -90,9 +90,9 @@ def create_app() -> FastAPI:
         title=settings.PROJECT_NAME,
         description="AutoML Platform API - No-code ML training platform",
         version=settings.VERSION,
-        docs_url="/docs" if settings.DEBUG else None,
+        docs_url="/docs",  # Always enabled for demo
         redoc_url="/redoc" if settings.DEBUG else None,
-        openapi_url="/openapi.json" if settings.DEBUG else None,
+        openapi_url="/openapi.json",  # Always enabled for demo
         lifespan=lifespan,
     )
     
