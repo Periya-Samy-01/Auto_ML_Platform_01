@@ -127,7 +127,7 @@ const initialTransientState: WorkflowTransientState = {
   selectedNodeId: null,
   inspectorVisible: true,
   inspectorMinimized: true,
-  inspectorPosition: { x: 320, y: 100 },
+  inspectorPosition: { x: 12, y: 48 },
   executionStatus: "idle",
   executionJobId: null,
   nodeExecutionStatuses: {},

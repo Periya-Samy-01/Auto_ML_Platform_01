@@ -35,7 +35,7 @@ const statusColors: Record<NodeStatus, string> = {
   "not-configured": "border-gray-500",
   partial: "border-amber-500",
   ready: "border-emerald-500",
-  running: "border-blue-500",
+  running: "border-purple-500",
   error: "border-red-500",
 };
 
@@ -43,7 +43,7 @@ const statusIcons: Record<NodeStatus, React.ReactNode> = {
   "not-configured": <Circle className="w-4 h-4 text-gray-500" />,
   partial: <AlertCircle className="w-4 h-4 text-amber-500" />,
   ready: <CheckCircle2 className="w-4 h-4 text-emerald-500" />,
-  running: <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />,
+  running: <Loader2 className="w-4 h-4 text-purple-500 animate-spin" />,
   error: <XCircle className="w-4 h-4 text-red-500" />,
 };
 
@@ -82,7 +82,7 @@ function BaseNodeComponent({ data, selected }: BaseNodeProps) {
           "bg-[rgba(30,30,30,0.95)] dark:bg-[rgba(30,30,30,0.95)] light:bg-white",
           statusColors[status],
           selected
-            ? "border-[3px] shadow-[0_0_0_3px_rgba(59,130,246,0.5)] z-10"
+            ? "border-[3px] shadow-[0_0_0_3px_rgba(168,85,247,0.5)] z-10"
             : "shadow-[0_2px_8px_rgba(0,0,0,0.3)] light:shadow-[0_2px_8px_rgba(0,0,0,0.1)]",
           isHovered && !selected && "shadow-[0_4px_16px_rgba(0,0,0,0.5)] light:shadow-[0_4px_16px_rgba(0,0,0,0.15)]",
           status === "running" && "animate-pulse-border"
@@ -151,10 +151,10 @@ function BaseNodeComponent({ data, selected }: BaseNodeProps) {
             type="target"
             position={Position.Left}
             className={cn(
-              "!w-2 !h-2 !bg-blue-500 !border-2 !border-[rgba(30,30,30,0.95)]",
+              "!w-2 !h-2 !bg-purple-500 !border-2 !border-[rgba(30,30,30,0.95)]",
               "transition-all duration-200",
               isHovered || selected ? "!opacity-100" : "!opacity-0",
-              "hover:!w-2.5 hover:!h-2.5 hover:!bg-emerald-500 hover:!shadow-[0_0_8px_rgba(16,185,129,0.6)]"
+              "hover:!w-2.5 hover:!h-2.5 hover:!bg-purple-400 hover:!shadow-[0_0_8px_rgba(168,85,247,0.6)]"
             )}
             style={{ top: "50%", left: -4 }}
           />
@@ -165,9 +165,9 @@ function BaseNodeComponent({ data, selected }: BaseNodeProps) {
             type="source"
             position={Position.Right}
             className={cn(
-              "!w-2 !h-2 !bg-blue-500 !border-2 !border-[rgba(30,30,30,0.95)]",
+              "!w-2 !h-2 !bg-purple-500 !border-2 !border-[rgba(30,30,30,0.95)]",
               "transition-all duration-200",
-              "hover:!w-2.5 hover:!h-2.5 hover:!bg-emerald-500 hover:!shadow-[0_0_8px_rgba(16,185,129,0.6)]"
+              "hover:!w-2.5 hover:!h-2.5 hover:!bg-purple-400 hover:!shadow-[0_0_8px_rgba(168,85,247,0.6)]"
             )}
             style={{ top: "50%", right: -4 }}
           />

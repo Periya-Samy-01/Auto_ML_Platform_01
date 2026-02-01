@@ -59,18 +59,18 @@ function CollapsibleSection({
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className="border-b border-white/5 last:border-b-0">
+    <div className="border-b border-purple-700/30 last:border-b-0">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-purple-700/20 transition-colors"
       >
         <div className="flex items-center gap-2">
           {isOpen ? (
-            <ChevronDown className="w-4 h-4 text-zinc-400" />
+            <ChevronDown className="w-4 h-4 text-purple-300/70" />
           ) : (
-            <ChevronRight className="w-4 h-4 text-zinc-400" />
+            <ChevronRight className="w-4 h-4 text-purple-300/70" />
           )}
-          <span className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">
+          <span className="text-xs font-semibold text-white/90 uppercase tracking-wider">
             {title}
           </span>
         </div>

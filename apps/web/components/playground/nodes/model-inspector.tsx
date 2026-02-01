@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { ChevronDown, ChevronRight, AlertTriangle, Zap, Info, Coins } from "lucide-react";
+import { ChevronDown, ChevronRight, AlertTriangle, Zap, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ModelConfig } from "./model-node";
 import type { AlgorithmId } from "@/configs/algorithms/types";
@@ -13,7 +13,6 @@ import {
 import {
   getVisibleFields,
   validateWithContext,
-  calculateWorkflowCost,
 } from "@/lib/algorithmRenderer";
 import { buildModelCapabilities } from "@/lib/workflowUtils";
 import { DynamicField } from "../inspector/fields";
@@ -46,20 +45,20 @@ function Section({
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className="border-b border-white/10 last:border-b-0">
+    <div className="border-b border-purple-700/30 last:border-b-0">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-purple-700/20 transition-colors"
       >
         <div className="flex items-center gap-2">
           {icon}
-          <span className="text-sm font-medium text-white">{title}</span>
+          <span className="text-sm font-medium text-white/90">{title}</span>
           {badge}
         </div>
         {isOpen ? (
-          <ChevronDown className="w-4 h-4 text-zinc-400" />
+          <ChevronDown className="w-4 h-4 text-purple-300/70" />
         ) : (
-          <ChevronRight className="w-4 h-4 text-zinc-400" />
+          <ChevronRight className="w-4 h-4 text-purple-300/70" />
         )}
       </button>
       {isOpen && <div className="px-4 pb-4 space-y-4">{children}</div>}
@@ -112,17 +111,7 @@ export function ModelInspector({
     });
   }, [config.algorithm, config.hyperparameters, datasetInfo]);
 
-  // Cost calculation
-  const estimatedCost = useMemo(() => {
-    if (!config.algorithm) return 0;
-    return calculateWorkflowCost({
-      algorithmId: config.algorithm,
-      sampleCount: datasetInfo?.sampleCount || 1000,
-      useCrossValidation: config.useCrossValidation,
-      useOptuna: config.useOptuna,
-      optunaTrials: config.optunaTrials,
-    });
-  }, [config, datasetInfo?.sampleCount]);
+
 
   // Handle algorithm change
   const handleAlgorithmChange = useCallback(
@@ -348,101 +337,11 @@ export function ModelInspector({
             )}
           </div>
 
-          {/* Optuna */}
-          <div className="space-y-3 mt-4">
-            <label className="flex items-center justify-between">
-              <div>
-                <span className="text-sm text-white">Hyperparameter Tuning (Optuna)</span>
-                <p className="text-xs text-zinc-500">
-                  Automatically find optimal hyperparameters
-                </p>
-              </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={config.useOptuna}
-                onClick={() => onConfigChange({ useOptuna: !config.useOptuna })}
-                className={cn(
-                  "relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full",
-                  "transition-colors duration-200 ease-in-out",
-                  config.useOptuna ? "bg-purple-500" : "bg-zinc-600"
-                )}
-              >
-                <span
-                  className={cn(
-                    "pointer-events-none inline-block h-4 w-4 transform rounded-full",
-                    "bg-white shadow-lg ring-0 transition duration-200 ease-in-out",
-                    "mt-0.5",
-                    config.useOptuna ? "translate-x-4 ml-0.5" : "translate-x-0.5"
-                  )}
-                />
-              </button>
-            </label>
 
-            {config.useOptuna && algorithmConfig && (
-              <div className="pl-4 border-l-2 border-purple-500/30 space-y-3">
-                <label className="flex items-center justify-between">
-                  <span className="text-xs text-zinc-300">Number of Trials</span>
-                  <select
-                    value={config.optunaTrials}
-                    onChange={(e) =>
-                      onConfigChange({ optunaTrials: parseInt(e.target.value) })
-                    }
-                    className="px-2 py-1 rounded bg-zinc-800 border border-white/10 text-sm text-white"
-                  >
-                    <option value={20}>20 trials</option>
-                    <option value={50}>50 trials</option>
-                    <option value={100}>100 trials</option>
-                  </select>
-                </label>
-
-                <label className="flex items-center justify-between">
-                  <span className="text-xs text-zinc-300">Optimization Metric</span>
-                  <select
-                    value={config.optunaMetric}
-                    onChange={(e) =>
-                      onConfigChange({ optunaMetric: e.target.value })
-                    }
-                    className="px-2 py-1 rounded bg-zinc-800 border border-white/10 text-sm text-white"
-                  >
-                    {algorithmConfig.evaluate.supportedMetrics.map((metric) => (
-                      <option key={metric} value={metric}>
-                        {algorithmConfig.evaluate.metricDefinitions[metric]?.name ||
-                          metric}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-            )}
-          </div>
         </Section>
       )}
 
-      {/* Cost Estimate */}
-      {config.algorithm && (
-        <Section
-          title="Cost Estimate"
-          icon={<Coins className="w-4 h-4 text-yellow-400" />}
-          defaultOpen={true}
-        >
-          <div className="p-3 rounded-lg bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-zinc-300">Estimated Credits</span>
-              <span className="text-lg font-bold text-yellow-400">
-                {estimatedCost}
-              </span>
-            </div>
-            <p className="text-xs text-zinc-500 mt-1">
-              {config.useOptuna
-                ? `${config.optunaTrials} Optuna trials`
-                : config.useCrossValidation
-                  ? `${config.cvFolds}-fold CV`
-                  : "Single train/test split"}
-            </p>
-          </div>
-        </Section>
-      )}
+
     </div>
   );
 }

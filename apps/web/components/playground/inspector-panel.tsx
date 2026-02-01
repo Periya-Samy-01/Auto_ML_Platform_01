@@ -243,25 +243,27 @@ export function InspectorPanel({ canvasBounds }: InspectorPanelProps) {
     [selectedNode, updateNode]
   );
 
-  // Minimized button
+  // Minimized button - shown when inspector is minimized
   if (inspectorMinimized) {
     return (
       <button
         onClick={() => setInspectorMinimized(false)}
         className={cn(
-          "absolute left-5 top-1/2 -translate-y-1/2 z-50",
+          "absolute left-3 top-16 z-50",
           "w-12 h-44 rounded-xl",
-          "bg-card/95 backdrop-blur-xl",
-          "border border-border",
-          "shadow-[0_8px_32px_rgba(125,167,255,0.2)]",
+          "bg-black/50 backdrop-blur-md",
+          "border border-purple-700/30",
+          "shadow-[0_8px_32px_rgba(147,51,234,0.2)]",
           "flex flex-col items-center justify-center gap-2",
-          "hover:bg-accent transition-colors",
-          "cursor-pointer"
+          "hover:bg-black/60 hover:border-purple-600/40",
+          "cursor-pointer",
+          "transition-all duration-300 ease-out",
+          "animate-in fade-in slide-in-from-left-4"
         )}
         style={{ writingMode: "vertical-rl", textOrientation: "mixed" }}
       >
-        <MousePointer2 className="w-4 h-4 text-muted-foreground rotate-90" />
-        <span className="text-xs font-medium text-foreground">Inspector</span>
+        <MousePointer2 className="w-4 h-4 text-purple-300 rotate-90" />
+        <span className="text-xs font-medium text-white/90">Inspector</span>
       </button>
     );
   }
@@ -419,10 +421,12 @@ export function InspectorPanel({ canvasBounds }: InspectorPanelProps) {
       ref={panelRef}
       className={cn(
         "absolute z-50 w-[380px] min-h-[500px] max-h-[calc(100vh-100px)]",
-        "bg-[rgba(15,15,15,0.95)] backdrop-blur-xl",
-        "border border-white/10 rounded-2xl",
-        "shadow-[0_8px_32px_rgba(0,0,0,0.5)]",
-        "flex flex-col overflow-hidden"
+        "bg-black/50 backdrop-blur-md",
+        "border border-purple-700/30 rounded-2xl",
+        "shadow-[0_8px_32px_rgba(147,51,234,0.25)]",
+        "flex flex-col overflow-hidden",
+        "transition-all duration-300 ease-out",
+        "animate-in fade-in slide-in-from-left-4"
       )}
       style={{
         left: inspectorPosition.x,
@@ -434,20 +438,20 @@ export function InspectorPanel({ canvasBounds }: InspectorPanelProps) {
       <div
         ref={headerRef}
         className={cn(
-          "flex items-center justify-between px-4 py-3 border-b border-border",
-          "bg-accent/30 cursor-move select-none flex-shrink-0"
+          "flex items-center justify-between px-4 py-3 border-b border-purple-700/30",
+          "bg-black/60 cursor-move select-none flex-shrink-0"
         )}
       >
         <div className="flex items-center gap-3">
-          <GripHorizontal className="w-4 h-4 text-muted-foreground" />
+          <GripHorizontal className="w-4 h-4 text-purple-300/70" />
           <span className="text-lg">{panelIcon}</span>
-          <span className="text-sm font-semibold text-foreground">{panelTitle}</span>
+          <span className="text-sm font-semibold text-white/90">{panelTitle}</span>
         </div>
         <button
           onClick={() => setInspectorMinimized(true)}
-          className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-accent transition-colors"
+          className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-purple-700/30 transition-colors"
         >
-          <Minimize2 className="w-4 h-4 text-muted-foreground" />
+          <Minimize2 className="w-4 h-4 text-purple-300/70" />
         </button>
       </div>
 

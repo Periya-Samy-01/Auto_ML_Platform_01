@@ -11,9 +11,6 @@ export interface ModelConfig {
   hyperparameters: Record<string, unknown>;
   useCrossValidation: boolean;
   cvFolds: number;
-  useOptuna: boolean;
-  optunaTrials: number;
-  optunaMetric: string;
   [key: string]: unknown;
 }
 
@@ -34,9 +31,6 @@ export const defaultModelConfig: ModelConfig = {
   hyperparameters: {},
   useCrossValidation: false,
   cvFolds: 5,
-  useOptuna: false,
-  optunaTrials: 50,
-  optunaMetric: "accuracy",
 };
 
 function generateSummaryLines(config: ModelConfig): string[] {
@@ -56,9 +50,7 @@ function generateSummaryLines(config: ModelConfig): string[] {
   lines.push(`${metadata.icon} ${metadata.shortName}`);
 
   // Training mode
-  if (config.useOptuna) {
-    lines.push(`Optuna: ${config.optunaTrials} trials`);
-  } else if (config.useCrossValidation) {
+  if (config.useCrossValidation) {
     lines.push(`${config.cvFolds}-Fold Cross-Validation`);
   } else {
     lines.push("Single train/test split");

@@ -120,7 +120,7 @@ function FeatureEngineeringNodeComponent({
       "not-configured": "border-zinc-600",
       partial: "border-amber-500",
       ready: "border-green-500",
-      running: "border-blue-500 animate-pulse-border",
+      running: "border-purple-500 animate-pulse-border",
       error: "border-red-500",
     };
     return statusColorMap[status] || "border-zinc-600";
@@ -140,7 +140,7 @@ function FeatureEngineeringNodeComponent({
         "shadow-[0_4px_20px_rgba(0,0,0,0.4)]",
         "transition-all duration-200",
         borderColor,
-        selected && "ring-2 ring-blue-500 ring-offset-2 ring-offset-zinc-950"
+        selected && "ring-2 ring-purple-500 ring-offset-2 ring-offset-zinc-950"
       )}
     >
       {/* Input Handle (left center) */}
@@ -148,7 +148,7 @@ function FeatureEngineeringNodeComponent({
         type="target"
         position={Position.Left}
         id="input"
-        className="!w-2 !h-2 !bg-blue-500 !border-2 !border-[rgba(30,30,30,0.95)]"
+        className="!w-2 !h-2 !bg-purple-500 !border-2 !border-[rgba(30,30,30,0.95)]"
         style={{ top: "50%" }}
       />
 
@@ -157,7 +157,7 @@ function FeatureEngineeringNodeComponent({
         type="source"
         position={Position.Right}
         id="output"
-        className="!w-2 !h-2 !bg-blue-500 !border-2 !border-[rgba(30,30,30,0.95)]"
+        className="!w-2 !h-2 !bg-purple-500 !border-2 !border-[rgba(30,30,30,0.95)]"
         style={{ top: "50%" }}
       />
 
@@ -176,7 +176,7 @@ function FeatureEngineeringNodeComponent({
               "bg-green-500": status === "ready",
               "bg-zinc-500": status === "not-configured",
               "bg-amber-500": status === "partial",
-              "bg-blue-500": status === "running",
+              "bg-purple-500": status === "running",
               "bg-red-500": status === "error",
             })}
           />

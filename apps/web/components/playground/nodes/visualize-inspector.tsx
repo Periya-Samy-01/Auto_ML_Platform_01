@@ -59,20 +59,20 @@ function Section({
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className="border-b border-white/10 last:border-b-0">
+    <div className="border-b border-purple-700/30 last:border-b-0">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-purple-700/20 transition-colors"
       >
         <div className="flex items-center gap-2">
           {icon}
-          <span className="text-sm font-medium text-white">{title}</span>
+          <span className="text-sm font-medium text-white/90">{title}</span>
           {badge}
         </div>
         {isOpen ? (
-          <ChevronDown className="w-4 h-4 text-zinc-400" />
+          <ChevronDown className="w-4 h-4 text-purple-300/70" />
         ) : (
-          <ChevronRight className="w-4 h-4 text-zinc-400" />
+          <ChevronRight className="w-4 h-4 text-purple-300/70" />
         )}
       </button>
       {isOpen && <div className="px-4 pb-4 space-y-4">{children}</div>}

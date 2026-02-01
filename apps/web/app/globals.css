@@ -59,54 +59,54 @@
   --popover: #1e2430;
   --popover-foreground: #e8eaed;
 
-  /* Primary - Cyan Accent */
-  --primary: #00d4ff;
-  --primary-foreground: #0a0c0f;
+  /* Primary - Purple Accent */
+  --primary: #a855f7;
+  --primary-foreground: #ffffff;
 
-  /* Secondary - Teal */
-  --secondary: #4db6ac;
-  --secondary-foreground: #0a0c0f;
+  /* Secondary - Violet */
+  --secondary: #7c3aed;
+  --secondary-foreground: #ffffff;
 
   /* Muted - Dark gray */
   --muted: #2a303a;
   --muted-foreground: #8b949e;
 
-  /* Accent - Blue */
-  --accent: #3b82f6;
+  /* Accent - Purple */
+  --accent: #9333ea;
   --accent-foreground: #ffffff;
 
   /* Destructive - Red */
   --destructive: #f87171;
 
-  /* Borders - Subtle dark */
-  --border: #2d333b;
-  --input: #2d333b;
-  --ring: #00d4ff;
+  /* Borders - Subtle dark with purple tint */
+  --border: #3d2b5a;
+  --input: #3d2b5a;
+  --ring: #a855f7;
 
-  /* Charts - Vibrant colors for dark bg */
-  --chart-1: #3b82f6;
-  --chart-2: #00d4ff;
+  /* Charts - Purple-focused palette */
+  --chart-1: #a855f7;
+  --chart-2: #c084fc;
   --chart-3: #ec4899;
-  --chart-4: #4db6ac;
+  --chart-4: #8b5cf6;
   --chart-5: #f59e0b;
 
   /* Gradient colors for advanced use */
-  --gradient-start: #3b82f6;
-  --gradient-mid: #00d4ff;
-  --gradient-end: #4db6ac;
+  --gradient-start: #9333ea;
+  --gradient-mid: #a855f7;
+  --gradient-end: #7c3aed;
 
-  /* Sidebar - Very dark */
-  --sidebar: #14171c;
+  /* Sidebar - Very dark with purple tint */
+  --sidebar: #14121c;
   --sidebar-foreground: #b0b8c1;
-  --sidebar-primary: #00d4ff;
-  --sidebar-primary-foreground: #0a0c0f;
-  --sidebar-accent: #1e2430;
+  --sidebar-primary: #a855f7;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1e1a2e;
   --sidebar-accent-foreground: #e8eaed;
-  --sidebar-border: #2d333b;
-  --sidebar-ring: #00d4ff;
+  --sidebar-border: #3d2b5a;
+  --sidebar-ring: #a855f7;
 }
 
-/* Light mode - Clean and professional */
+/* Light mode - Clean with purple accents */
 .light {
   --background: #F8F9FA;
   --foreground: #1a1e24;
@@ -114,34 +114,34 @@
   --card-foreground: #1a1e24;
   --popover: #FFFFFF;
   --popover-foreground: #1a1e24;
-  --primary: #0891b2;
+  --primary: #9333ea;
   --primary-foreground: #FFFFFF;
-  --secondary: #4db6ac;
-  --secondary-foreground: #0a0c0f;
+  --secondary: #7c3aed;
+  --secondary-foreground: #FFFFFF;
   --muted: #e5e7eb;
   --muted-foreground: #6b7280;
-  --accent: #3b82f6;
+  --accent: #a855f7;
   --accent-foreground: #FFFFFF;
   --destructive: #dc2626;
   --border: #e5e7eb;
   --input: #e5e7eb;
-  --ring: #0891b2;
-  --chart-1: #0891b2;
-  --chart-2: #3b82f6;
+  --ring: #9333ea;
+  --chart-1: #9333ea;
+  --chart-2: #a855f7;
   --chart-3: #ec4899;
-  --chart-4: #4db6ac;
+  --chart-4: #8b5cf6;
   --chart-5: #f59e0b;
-  --gradient-start: #0891b2;
-  --gradient-mid: #3b82f6;
-  --gradient-end: #4db6ac;
+  --gradient-start: #9333ea;
+  --gradient-mid: #a855f7;
+  --gradient-end: #7c3aed;
   --sidebar: #FFFFFF;
   --sidebar-foreground: #374151;
-  --sidebar-primary: #0891b2;
+  --sidebar-primary: #9333ea;
   --sidebar-primary-foreground: #FFFFFF;
   --sidebar-accent: #f3f4f6;
   --sidebar-accent-foreground: #1a1e24;
   --sidebar-border: #e5e7eb;
-  --sidebar-ring: #0891b2;
+  --sidebar-ring: #9333ea;
 }
 
 @layer base {
@@ -154,9 +154,9 @@
   }
 }
 
-/* Dashboard gradient backgrounds - Dark first */
+/* Dashboard gradient backgrounds - Dark first with purple tint */
 .dashboard-bg {
-  background: linear-gradient(135deg, #1a1e24 0%, #1c222a 25%, #1e2530 50%, #1c2228 75%, #1a1e24 100%);
+  background: linear-gradient(135deg, #1a1a24 0%, #1c1c2a 25%, #1e1e30 50%, #1c1c28 75%, #1a1a24 100%);
   background-attachment: fixed;
 }
 
@@ -178,26 +178,26 @@
   right: 0;
   bottom: 0;
   background:
-    radial-gradient(ellipse at 20% 20%, rgba(0, 212, 255, 0.05) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 80%, rgba(59, 130, 246, 0.04) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 50%, rgba(77, 182, 172, 0.03) 0%, transparent 50%);
+    radial-gradient(ellipse at 20% 20%, rgba(147, 51, 234, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(168, 85, 247, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(124, 58, 237, 0.04) 0%, transparent 50%);
   pointer-events: none;
   z-index: 0;
 }
 
 .light .dashboard-mesh::before {
   background:
-    radial-gradient(ellipse at 20% 20%, rgba(8, 145, 178, 0.06) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 80%, rgba(59, 130, 246, 0.05) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 50%, rgba(77, 182, 172, 0.04) 0%, transparent 50%);
+    radial-gradient(ellipse at 20% 20%, rgba(147, 51, 234, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(168, 85, 247, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(124, 58, 237, 0.05) 0%, transparent 50%);
 }
 
-/* Glass effect cards */
+/* Glass effect cards with purple tint */
 .glass-card {
-  background: rgba(30, 36, 48, 0.7);
+  background: rgba(30, 30, 48, 0.7);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(45, 51, 59, 0.8);
+  border: 1px solid rgba(147, 51, 234, 0.2);
 }
 
 .light .glass-card {
@@ -229,10 +229,10 @@
   z-index: -1;
 }
 
-/* Custom scrollbar for inspector and panels */
+/* Custom scrollbar for inspector and panels - Purple theme */
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgba(0, 212, 255, 0.3) transparent;
+  scrollbar-color: rgba(168, 85, 247, 0.3) transparent;
 }
 
 .custom-scrollbar::-webkit-scrollbar {
@@ -244,12 +244,12 @@
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(0, 212, 255, 0.3);
+  background-color: rgba(168, 85, 247, 0.3);
   border-radius: 3px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(0, 212, 255, 0.5);
+  background-color: rgba(168, 85, 247, 0.5);
 }
 
 /* React Flow custom styles */
@@ -258,15 +258,15 @@
 }
 
 .react-flow__node-default {
-  background: rgba(30, 36, 48, 0.95);
-  border: 2px solid rgba(0, 212, 255, 0.5);
+  background: rgba(30, 30, 48, 0.95);
+  border: 2px solid rgba(147, 51, 234, 0.5);
   border-radius: 12px;
   padding: 16px;
 }
 
 .react-flow__node.selected {
-  border-color: #00d4ff;
-  box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.3);
+  border-color: #a855f7;
+  box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.3);
 }
 
 /* Let ReactFlow use its default animated edge styling */
@@ -274,12 +274,12 @@
 .react-flow__handle {
   width: 10px;
   height: 10px;
-  background: #00d4ff;
-  border: 2px solid #1a1e24;
+  background: #a855f7;
+  border: 2px solid #1a1a24;
 }
 
 .react-flow__handle:hover {
-  background: #4db6ac;
+  background: #c084fc;
 }
 
 /* BaseNode animations */
