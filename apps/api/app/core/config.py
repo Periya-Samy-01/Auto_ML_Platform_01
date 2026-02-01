@@ -33,11 +33,28 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
     
-    # CORS
-    CORS_ORIGINS: List[str] = [
-        "http://localhost:3000",
-        "http://localhost:5173",
-    ]
+    # CORS - accepts comma-separated string or JSON array
+    # Use "*" to allow all origins (for development/demo)
+    CORS_ORIGINS_STR: str = "http://localhost:3000,http://localhost:5173"
+    
+    @property
+    def CORS_ORIGINS(self) -> List[str]:
+        """Parse CORS origins from string (comma-separated or JSON array)"""
+        value = self.CORS_ORIGINS_STR
+        if not value:
+            return ["http://localhost:3000"]
+        # Handle wildcard
+        if value.strip() == "*":
+            return ["*"]
+        # Try JSON array first
+        if value.startswith("["):
+            import json
+            try:
+                return json.loads(value)
+            except json.JSONDecodeError:
+                pass
+        # Fall back to comma-separated
+        return [origin.strip() for origin in value.split(",") if origin.strip()]
     
     # Storage (Cloudflare R2)
     R2_ACCOUNT_ID: str = ""
