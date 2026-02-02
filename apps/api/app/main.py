@@ -59,16 +59,19 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     print(f"Environment: {settings.ENVIRONMENT}")
     print(f"Debug: {settings.DEBUG}")
 
-    # Connect to Redis
+    # Connect to Redis (non-fatal - app can work without it for basic API calls)
     from app.auth.redis import redis_client
     print("Connecting to Redis...")
-    await redis_client.connect()
-
-    # Verify Redis connection
-    if await redis_client.ping():
-        print("✓ Redis connected successfully")
-    else:
-        print("✗ Redis connection failed")
+    try:
+        await redis_client.connect()
+        # Verify Redis connection
+        if await redis_client.ping():
+            print("✓ Redis connected successfully")
+        else:
+            print("✗ Redis ping failed")
+    except Exception as e:
+        print(f"✗ Redis connection failed: {e}")
+        print("⚠️ App will start without Redis (some features may be limited)")
 
     # Create ARQ Redis pool for job queuing
     print("Creating ARQ Redis pool...")

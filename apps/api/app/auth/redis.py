@@ -32,23 +32,33 @@ class RedisClient:
     async def connect(self) -> None:
         """Initialize Redis connection"""
         if self._redis is None:
-            redis_url = settings.REDIS_URL.strip()
+            redis_url = settings.REDIS_URL.strip() if settings.REDIS_URL else ""
+            
+            # Debug: Print URL info (hide password)
+            print(f"[Redis Debug] URL length: {len(redis_url)}")
+            print(f"[Redis Debug] URL starts with 'redis://': {redis_url.startswith('redis://')}")
+            print(f"[Redis Debug] URL starts with 'rediss://': {redis_url.startswith('rediss://')}")
+            if "://" in redis_url:
+                scheme = redis_url.split("://")[0]
+                print(f"[Redis Debug] Detected scheme: '{scheme}'")
+            else:
+                print(f"[Redis Debug] No scheme found in URL! First 20 chars: '{redis_url[:20]}...'")
             
             # Auto-detect Upstash and ensure TLS (rediss://) is used
             if "upstash.io" in redis_url and redis_url.startswith("redis://"):
                 redis_url = redis_url.replace("redis://", "rediss://", 1)
+                print(f"[Redis Debug] Converted to rediss:// for Upstash")
             
-            # Log the URL scheme for debugging (hide password)
-            import logging
-            logger = logging.getLogger(__name__)
-            url_scheme = redis_url.split("://")[0] if "://" in redis_url else "unknown"
-            logger.info(f"Connecting to Redis with scheme: {url_scheme}")
-            
-            self._redis = redis.from_url(
-                redis_url,
-                encoding="utf-8",
-                decode_responses=True,
-            )
+            try:
+                self._redis = redis.from_url(
+                    redis_url,
+                    encoding="utf-8",
+                    decode_responses=True,
+                )
+            except Exception as e:
+                print(f"[Redis Debug] Failed to create Redis client: {e}")
+                self._redis = None
+                raise
     
     async def disconnect(self) -> None:
         """Close Redis connection"""
