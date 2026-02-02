@@ -129,14 +129,75 @@ async def execute_workflow_endpoint(
         ttl=3600 * 24,  # 24 hours
     )
 
-    # Queue the job
-    await _queue_workflow_job(job_id, request.priority)
+    # Check if we should execute synchronously (for free-tier deployments)
+    from app.core.config import settings
+    
+    if settings.SYNC_WORKFLOW_EXECUTION:
+        # Execute synchronously - no worker needed
+        try:
+            # Update status to running
+            workflow_data["status"] = WorkflowStatus.RUNNING.value
+            workflow_data["started_at"] = datetime.utcnow().isoformat()
+            cache_service.set_with_ttl(
+                f"workflow:{job_id}",
+                json.dumps(workflow_data),
+                ttl=3600 * 24,
+            )
+            
+            # Execute workflow
+            results = execute_workflow(
+                nodes=request.nodes,
+                edges=request.edges,
+                job_id=job_id,
+            )
+            
+            # Update with results
+            workflow_data["status"] = WorkflowStatus.COMPLETED.value
+            workflow_data["completed_at"] = datetime.utcnow().isoformat()
+            workflow_data["results"] = results.model_dump()
+            
+            # Update node statuses to completed
+            for node_id in workflow_data["node_statuses"]:
+                workflow_data["node_statuses"][node_id]["status"] = NodeStatus.COMPLETED.value
+                workflow_data["node_statuses"][node_id]["completed_at"] = datetime.utcnow().isoformat()
+            
+            cache_service.set_with_ttl(
+                f"workflow:{job_id}",
+                json.dumps(workflow_data),
+                ttl=3600 * 24,
+            )
+            
+            return WorkflowExecuteResponse(
+                job_id=job_id,
+                status=WorkflowStatus.COMPLETED,
+                message="Workflow executed successfully",
+            )
+            
+        except Exception as e:
+            logger.error(f"Synchronous workflow execution failed: {e}")
+            # Update status to failed
+            workflow_data["status"] = WorkflowStatus.FAILED.value
+            workflow_data["completed_at"] = datetime.utcnow().isoformat()
+            workflow_data["error"] = str(e)
+            cache_service.set_with_ttl(
+                f"workflow:{job_id}",
+                json.dumps(workflow_data),
+                ttl=3600 * 24,
+            )
+            return WorkflowExecuteResponse(
+                job_id=job_id,
+                status=WorkflowStatus.FAILED,
+                message=f"Workflow failed: {str(e)}",
+            )
+    else:
+        # Queue the job for async execution (requires ARQ worker)
+        await _queue_workflow_job(job_id, request.priority)
 
-    return WorkflowExecuteResponse(
-        job_id=job_id,
-        status=WorkflowStatus.PENDING,
-        message="Workflow queued for execution",
-    )
+        return WorkflowExecuteResponse(
+            job_id=job_id,
+            status=WorkflowStatus.PENDING,
+            message="Workflow queued for execution",
+        )
 
 
 @router.get("/{job_id}/status", response_model=WorkflowStatusResponse)

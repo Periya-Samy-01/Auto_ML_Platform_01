@@ -83,6 +83,11 @@ class Settings(BaseSettings):
     GITHUB_CLIENT_SECRET: str = ""
     GITHUB_REDIRECT_URI: str = "http://localhost:8000/api/auth/github/callback"
     
+    # Workflow Execution Mode
+    # Set to True to run workflows synchronously (no ARQ worker needed)
+    # Useful for free-tier deployments without background worker support
+    SYNC_WORKFLOW_EXECUTION: bool = False
+    
     # Rate Limiting
     RATE_LIMIT_REQUESTS_PER_MINUTE: int = 100
     
