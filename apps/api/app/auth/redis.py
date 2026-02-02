@@ -32,11 +32,17 @@ class RedisClient:
     async def connect(self) -> None:
         """Initialize Redis connection"""
         if self._redis is None:
-            redis_url = settings.REDIS_URL
+            redis_url = settings.REDIS_URL.strip()
             
             # Auto-detect Upstash and ensure TLS (rediss://) is used
             if "upstash.io" in redis_url and redis_url.startswith("redis://"):
                 redis_url = redis_url.replace("redis://", "rediss://", 1)
+            
+            # Log the URL scheme for debugging (hide password)
+            import logging
+            logger = logging.getLogger(__name__)
+            url_scheme = redis_url.split("://")[0] if "://" in redis_url else "unknown"
+            logger.info(f"Connecting to Redis with scheme: {url_scheme}")
             
             self._redis = redis.from_url(
                 redis_url,
