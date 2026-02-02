@@ -335,6 +335,17 @@ def parse_redis_url(url: str) -> RedisSettings:
     """
     from urllib.parse import urlparse
 
+    # Auto-detect Upstash and ensure TLS is used
+    use_ssl = False
+    if "upstash.io" in url:
+        use_ssl = True
+        if url.startswith("redis://"):
+            url = url.replace("redis://", "rediss://", 1)
+    
+    # Also detect if URL explicitly uses rediss://
+    if url.startswith("rediss://"):
+        use_ssl = True
+
     parsed = urlparse(url)
 
     return RedisSettings(
@@ -342,6 +353,7 @@ def parse_redis_url(url: str) -> RedisSettings:
         port=parsed.port or 6379,
         database=int(parsed.path.lstrip("/") or 0),
         password=parsed.password,
+        ssl=use_ssl,
     )
 
 

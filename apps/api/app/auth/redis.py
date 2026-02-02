@@ -32,8 +32,14 @@ class RedisClient:
     async def connect(self) -> None:
         """Initialize Redis connection"""
         if self._redis is None:
+            redis_url = settings.REDIS_URL
+            
+            # Auto-detect Upstash and ensure TLS (rediss://) is used
+            if "upstash.io" in redis_url and redis_url.startswith("redis://"):
+                redis_url = redis_url.replace("redis://", "rediss://", 1)
+            
             self._redis = redis.from_url(
-                settings.REDIS_URL,
+                redis_url,
                 encoding="utf-8",
                 decode_responses=True,
             )

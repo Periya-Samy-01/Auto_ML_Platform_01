@@ -25,12 +25,26 @@ def get_arq_redis_settings() -> RedisSettings:
     """Parse Redis URL into ARQ RedisSettings"""
     from urllib.parse import urlparse
 
-    parsed = urlparse(settings.REDIS_URL)
+    redis_url = settings.REDIS_URL
+    
+    # Auto-detect Upstash and ensure TLS is used
+    use_ssl = False
+    if "upstash.io" in redis_url:
+        use_ssl = True
+        if redis_url.startswith("redis://"):
+            redis_url = redis_url.replace("redis://", "rediss://", 1)
+    
+    # Also detect if URL explicitly uses rediss://
+    if redis_url.startswith("rediss://"):
+        use_ssl = True
+    
+    parsed = urlparse(redis_url)
     return RedisSettings(
         host=parsed.hostname or "localhost",
         port=parsed.port or 6379,
         database=int(parsed.path.lstrip("/") or 0),
         password=parsed.password,
+        ssl=use_ssl,
     )
 
 
