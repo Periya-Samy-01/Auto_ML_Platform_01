@@ -32,15 +32,15 @@ export function ExecutionButton({
   const tooltipText = isRunning
     ? "Cancel execution"
     : disabled
-    ? "Configure all nodes to run workflow"
-    : "Run workflow (Ctrl+Enter)";
+      ? "Configure all nodes to run workflow"
+      : "Run workflow (Ctrl+Enter)";
 
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
-            variant={isRunning ? "destructive" : "default"}
+            variant={isRunning ? "destructive" : "primary"}
             size="sm"
             onClick={isRunning ? onCancel : onExecute}
             disabled={disabled && !isRunning}
