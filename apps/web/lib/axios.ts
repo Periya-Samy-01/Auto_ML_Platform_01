@@ -18,7 +18,7 @@ export const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 30000, // 30 seconds
+  timeout: 300000, // 5 minutes - needed for synchronous workflow execution
 });
 
 // Track if we're currently refreshing to avoid multiple refresh calls
