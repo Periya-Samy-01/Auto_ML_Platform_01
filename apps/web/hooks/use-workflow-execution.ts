@@ -193,7 +193,7 @@ async function validateWorkflow(nodes: WorkflowNode[], edges: WorkflowEdge[]): P
   return response.data;
 }
 
-async function executeWorkflow(nodes: WorkflowNode[], edges: WorkflowEdge[], dryRun = false): Promise<{ jobId: string; status: WorkflowStatus; message: string }> {
+async function executeWorkflow(nodes: WorkflowNode[], edges: WorkflowEdge[], dryRun = false): Promise<{ jobId: string; status: WorkflowStatus; message: string; results?: WorkflowResults }> {
   const response = await api.post("/workflows/execute", { nodes, edges, dry_run: dryRun });
   return response.data;
 }
@@ -412,6 +412,14 @@ export function useWorkflowExecution() {
         setStatus("failed");
         setIsExecuting(false);
         return null;
+      }
+
+      // Handle results returned directly (sync/HF execution)
+      if (response.status === "completed" && response.results) {
+        setStatus("completed");
+        setResults(response.results as WorkflowResults);
+        setIsExecuting(false);
+        return response.jobId;
       }
 
       setJobId(response.jobId);

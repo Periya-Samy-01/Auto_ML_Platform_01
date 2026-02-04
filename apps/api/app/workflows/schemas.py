@@ -189,6 +189,7 @@ class WorkflowExecuteResponse(CamelCaseModel):
     job_id: str
     status: WorkflowStatus
     message: str
+    results: Optional[Dict[str, Any]] = None  # Results returned directly for sync/HF execution
 
 
 class NodeExecutionStatus(CamelCaseModel):

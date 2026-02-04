@@ -190,10 +190,10 @@ async def _save_model_to_db(
         else:
             metrics_dict = metrics
         
-        # Create Model record
+        # Create Model record (job_id is None since we don't create Job records for sync/HF execution)
         model = Model(
             user_id=user.id,
-            job_id=uuid.UUID(job_id),
+            job_id=None,  # No Job record created for sync/HF execution
             dataset_id=dataset_id,
             name=model_name,
             version=dataset_name,  # Store dataset name for display
@@ -299,10 +299,12 @@ async def _execute_via_hf_space(
                                         db, current_user, job_id, request, results_data
                                     )
                                     
+                                    # Return results directly (bypasses Redis cache issues)
                                     return WorkflowExecuteResponse(
                                         job_id=job_id,
                                         status=WorkflowStatus.COMPLETED,
                                         message="Workflow executed successfully via HF Space",
+                                        results=results_data,
                                     )
                             except json.JSONDecodeError:
                                 continue
