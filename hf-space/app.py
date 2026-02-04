@@ -440,28 +440,41 @@ class WorkflowExecutor:
         if self.raw_data is None:
             raise ValueError("No data available for splitting")
         
-        # Separate features and target
+        logger.info(f"Raw data columns: {list(self.raw_data.columns)}")
+        logger.info(f"Target column from config: {self.target_column}")
+        
+        # Determine target column with fallbacks
+        target_col = None
+        
+        # First try the configured target column
         if self.target_column and self.target_column in self.raw_data.columns:
-            X = self.raw_data.drop(columns=[self.target_column])
-            y = self.raw_data[self.target_column]
+            target_col = self.target_column
+        # Fallback to "target" (sklearn default)
+        elif "target" in self.raw_data.columns:
+            target_col = "target"
+            self.target_column = target_col
+            logger.info(f"Using fallback target column: {target_col}")
+        # Fallback to last column
         else:
-            X = self.raw_data
-            y = None
+            target_col = self.raw_data.columns[-1]
+            self.target_column = target_col
+            logger.info(f"Using last column as target: {target_col}")
+        
+        logger.info(f"Final target column: {target_col}")
+        
+        # Separate features and target
+        X = self.raw_data.drop(columns=[target_col])
+        y = self.raw_data[target_col]
         
         self.feature_names = list(X.columns)
         X = X.values
+        y = y.values
         
-        if y is not None:
-            y = y.values
-            self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
-                X, y, test_size=test_size, random_state=random_seed
-            )
-        else:
-            self.X_train, self.X_test = train_test_split(
-                X, test_size=test_size, random_state=random_seed
-            )
+        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
+            X, y, test_size=test_size, random_state=random_seed
+        )
         
-        logger.info(f"Split complete. Train: {len(self.X_train)}, Test: {len(self.X_test)}")
+        logger.info(f"Split complete. Train: {len(self.X_train)}, Test: {len(self.X_test)}, y_train shape: {self.y_train.shape}")
     
     def _execute_model(self, config: Dict):
         """Train the model."""
