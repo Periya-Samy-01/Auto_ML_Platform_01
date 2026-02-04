@@ -369,11 +369,12 @@ class WorkflowExecutor:
         # Get execution order (simple topological sort based on edges)
         node_list = list(self.nodes.values())
         
-        # Sort by type priority
+        # Sort by type priority (include aliases)
         type_order = {
             "dataset": 0,
             "preprocessing": 1,
             "trainTestSplit": 2,
+            "split": 2,  # Alias for trainTestSplit
             "model": 3,
             "evaluate": 4,
             "visualize": 5,
@@ -394,7 +395,7 @@ class WorkflowExecutor:
             
             if node_type == "dataset":
                 self._execute_dataset(config)
-            elif node_type == "trainTestSplit":
+            elif node_type in ("trainTestSplit", "split"):  # Handle both names
                 self._execute_split(config)
             elif node_type == "model":
                 self._execute_model(config)
