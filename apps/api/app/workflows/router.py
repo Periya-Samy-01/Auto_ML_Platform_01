@@ -154,8 +154,9 @@ async def _execute_via_hf_space(
     request: WorkflowExecuteRequest,
     workflow_data: dict,
 ) -> WorkflowExecuteResponse:
-    """Execute workflow via Hugging Face Space API."""
+    """Execute workflow via Hugging Face Space API (Gradio 4.x format)."""
     import httpx
+    import asyncio
     from app.core.config import settings
     
     try:
@@ -174,43 +175,72 @@ async def _execute_via_hf_space(
             "edges": [e.model_dump() for e in request.edges],
         }
         
-        # Call HF Space API
-        async with httpx.AsyncClient(timeout=180.0) as client:
-            response = await client.post(
-                f"{settings.HF_SPACE_URL}/api/predict",
+        # Gradio 4.x uses queue-based API
+        async with httpx.AsyncClient(timeout=300.0) as client:
+            # Step 1: Submit job to queue
+            submit_response = await client.post(
+                f"{settings.HF_SPACE_URL}/call/predict",
                 json={"data": [json.dumps(hf_payload)]},
             )
             
-            if response.status_code != 200:
-                raise Exception(f"HF Space returned {response.status_code}: {response.text}")
+            if submit_response.status_code != 200:
+                raise Exception(f"HF Space submit failed: {submit_response.status_code}: {submit_response.text}")
             
-            result = response.json()
-            hf_result = json.loads(result["data"][0])
-        
-        if hf_result.get("status") == "failed":
-            raise Exception(hf_result.get("error", "Unknown error"))
-        
-        # Update with results
-        workflow_data["status"] = WorkflowStatus.COMPLETED.value
-        workflow_data["completed_at"] = datetime.utcnow().isoformat()
-        workflow_data["results"] = hf_result.get("results", {})
-        
-        # Update node statuses to completed
-        for node_id in workflow_data["node_statuses"]:
-            workflow_data["node_statuses"][node_id]["status"] = NodeStatus.COMPLETED.value
-            workflow_data["node_statuses"][node_id]["completed_at"] = datetime.utcnow().isoformat()
-        
-        cache_service.set_with_ttl(
-            f"workflow:{job_id}",
-            json.dumps(workflow_data),
-            ttl=3600 * 24,
-        )
-        
-        return WorkflowExecuteResponse(
-            job_id=job_id,
-            status=WorkflowStatus.COMPLETED,
-            message="Workflow executed successfully via HF Space",
-        )
+            event_id = submit_response.json().get("event_id")
+            if not event_id:
+                raise Exception("No event_id returned from HF Space")
+            
+            # Step 2: Poll for result
+            max_attempts = 60  # 5 minutes max (5s intervals)
+            for attempt in range(max_attempts):
+                result_response = await client.get(
+                    f"{settings.HF_SPACE_URL}/call/predict/{event_id}",
+                )
+                
+                if result_response.status_code == 200:
+                    # Parse SSE response
+                    response_text = result_response.text
+                    
+                    # Look for "data:" lines in SSE response
+                    for line in response_text.split("\n"):
+                        if line.startswith("data: "):
+                            data_str = line[6:]  # Remove "data: " prefix
+                            try:
+                                data = json.loads(data_str)
+                                if isinstance(data, list) and len(data) > 0:
+                                    hf_result = json.loads(data[0])
+                                    
+                                    if hf_result.get("status") == "failed":
+                                        raise Exception(hf_result.get("error", "Unknown error"))
+                                    
+                                    # Success! Update with results
+                                    workflow_data["status"] = WorkflowStatus.COMPLETED.value
+                                    workflow_data["completed_at"] = datetime.utcnow().isoformat()
+                                    workflow_data["results"] = hf_result.get("results", {})
+                                    
+                                    # Update node statuses
+                                    for node_id in workflow_data["node_statuses"]:
+                                        workflow_data["node_statuses"][node_id]["status"] = NodeStatus.COMPLETED.value
+                                        workflow_data["node_statuses"][node_id]["completed_at"] = datetime.utcnow().isoformat()
+                                    
+                                    cache_service.set_with_ttl(
+                                        f"workflow:{job_id}",
+                                        json.dumps(workflow_data),
+                                        ttl=3600 * 24,
+                                    )
+                                    
+                                    return WorkflowExecuteResponse(
+                                        job_id=job_id,
+                                        status=WorkflowStatus.COMPLETED,
+                                        message="Workflow executed successfully via HF Space",
+                                    )
+                            except json.JSONDecodeError:
+                                continue
+                
+                # Wait before next poll
+                await asyncio.sleep(5)
+            
+            raise Exception("HF Space execution timed out")
         
     except Exception as e:
         logger.error(f"HF Space workflow execution failed: {e}")
