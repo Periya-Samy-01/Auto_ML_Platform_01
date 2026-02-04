@@ -275,10 +275,13 @@ async def _execute_via_hf_space(
                                     if hf_result.get("status") == "failed":
                                         raise Exception(hf_result.get("error", "Unknown error"))
                                     
-                                    # Success! Update with results
+                                    # Success! Log and update with results
+                                    results_data = hf_result.get("results", {})
+                                    logger.info(f"HF Space returned results: {list(results_data.keys())}")
+                                    
                                     workflow_data["status"] = WorkflowStatus.COMPLETED.value
                                     workflow_data["completed_at"] = datetime.utcnow().isoformat()
-                                    workflow_data["results"] = hf_result.get("results", {})
+                                    workflow_data["results"] = results_data
                                     
                                     # Update node statuses
                                     for node_id in workflow_data["node_statuses"]:
@@ -293,7 +296,7 @@ async def _execute_via_hf_space(
                                     
                                     # Save Model to database
                                     await _save_model_to_db(
-                                        db, current_user, job_id, request, hf_result.get("results", {})
+                                        db, current_user, job_id, request, results_data
                                     )
                                     
                                     return WorkflowExecuteResponse(
