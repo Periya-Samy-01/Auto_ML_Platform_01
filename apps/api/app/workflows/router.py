@@ -129,74 +129,165 @@ async def execute_workflow_endpoint(
         ttl=3600 * 24,  # 24 hours
     )
 
-    # Check if we should execute synchronously (for free-tier deployments)
+    # Check execution mode
     from app.core.config import settings
     
-    if settings.SYNC_WORKFLOW_EXECUTION:
-        # Execute synchronously - no worker needed
-        try:
-            # Update status to running
-            workflow_data["status"] = WorkflowStatus.RUNNING.value
-            workflow_data["started_at"] = datetime.utcnow().isoformat()
-            cache_service.set_with_ttl(
-                f"workflow:{job_id}",
-                json.dumps(workflow_data),
-                ttl=3600 * 24,
-            )
-            
-            # Execute workflow
-            results = execute_workflow(
-                nodes=request.nodes,
-                edges=request.edges,
-                job_id=job_id,
-            )
-            
-            # Update with results
-            workflow_data["status"] = WorkflowStatus.COMPLETED.value
-            workflow_data["completed_at"] = datetime.utcnow().isoformat()
-            workflow_data["results"] = results.model_dump()
-            
-            # Update node statuses to completed
-            for node_id in workflow_data["node_statuses"]:
-                workflow_data["node_statuses"][node_id]["status"] = NodeStatus.COMPLETED.value
-                workflow_data["node_statuses"][node_id]["completed_at"] = datetime.utcnow().isoformat()
-            
-            cache_service.set_with_ttl(
-                f"workflow:{job_id}",
-                json.dumps(workflow_data),
-                ttl=3600 * 24,
-            )
-            
-            return WorkflowExecuteResponse(
-                job_id=job_id,
-                status=WorkflowStatus.COMPLETED,
-                message="Workflow executed successfully",
-            )
-            
-        except Exception as e:
-            logger.error(f"Synchronous workflow execution failed: {e}")
-            # Update status to failed
-            workflow_data["status"] = WorkflowStatus.FAILED.value
-            workflow_data["completed_at"] = datetime.utcnow().isoformat()
-            workflow_data["error"] = str(e)
-            cache_service.set_with_ttl(
-                f"workflow:{job_id}",
-                json.dumps(workflow_data),
-                ttl=3600 * 24,
-            )
-            return WorkflowExecuteResponse(
-                job_id=job_id,
-                status=WorkflowStatus.FAILED,
-                message=f"Workflow failed: {str(e)}",
-            )
+    # Priority: HF Space > Synchronous > ARQ Worker
+    if settings.HF_SPACE_URL:
+        # Execute via Hugging Face Space (recommended for production)
+        return await _execute_via_hf_space(job_id, request, workflow_data)
+    elif settings.SYNC_WORKFLOW_EXECUTION:
+        # Execute synchronously - no worker needed (may timeout on Render)
+        return await _execute_synchronously(job_id, request, workflow_data)
     else:
         # Queue the job for async execution (requires ARQ worker)
         await _queue_workflow_job(job_id, request.priority)
-
         return WorkflowExecuteResponse(
             job_id=job_id,
             status=WorkflowStatus.PENDING,
             message="Workflow queued for execution",
+        )
+
+
+async def _execute_via_hf_space(
+    job_id: str,
+    request: WorkflowExecuteRequest,
+    workflow_data: dict,
+) -> WorkflowExecuteResponse:
+    """Execute workflow via Hugging Face Space API."""
+    import httpx
+    from app.core.config import settings
+    
+    try:
+        # Update status to running
+        workflow_data["status"] = WorkflowStatus.RUNNING.value
+        workflow_data["started_at"] = datetime.utcnow().isoformat()
+        cache_service.set_with_ttl(
+            f"workflow:{job_id}",
+            json.dumps(workflow_data),
+            ttl=3600 * 24,
+        )
+        
+        # Prepare workflow data for HF Space
+        hf_payload = {
+            "nodes": [n.model_dump() for n in request.nodes],
+            "edges": [e.model_dump() for e in request.edges],
+        }
+        
+        # Call HF Space API
+        async with httpx.AsyncClient(timeout=180.0) as client:
+            response = await client.post(
+                f"{settings.HF_SPACE_URL}/api/predict",
+                json={"data": [json.dumps(hf_payload)]},
+            )
+            
+            if response.status_code != 200:
+                raise Exception(f"HF Space returned {response.status_code}: {response.text}")
+            
+            result = response.json()
+            hf_result = json.loads(result["data"][0])
+        
+        if hf_result.get("status") == "failed":
+            raise Exception(hf_result.get("error", "Unknown error"))
+        
+        # Update with results
+        workflow_data["status"] = WorkflowStatus.COMPLETED.value
+        workflow_data["completed_at"] = datetime.utcnow().isoformat()
+        workflow_data["results"] = hf_result.get("results", {})
+        
+        # Update node statuses to completed
+        for node_id in workflow_data["node_statuses"]:
+            workflow_data["node_statuses"][node_id]["status"] = NodeStatus.COMPLETED.value
+            workflow_data["node_statuses"][node_id]["completed_at"] = datetime.utcnow().isoformat()
+        
+        cache_service.set_with_ttl(
+            f"workflow:{job_id}",
+            json.dumps(workflow_data),
+            ttl=3600 * 24,
+        )
+        
+        return WorkflowExecuteResponse(
+            job_id=job_id,
+            status=WorkflowStatus.COMPLETED,
+            message="Workflow executed successfully via HF Space",
+        )
+        
+    except Exception as e:
+        logger.error(f"HF Space workflow execution failed: {e}")
+        workflow_data["status"] = WorkflowStatus.FAILED.value
+        workflow_data["completed_at"] = datetime.utcnow().isoformat()
+        workflow_data["error"] = str(e)
+        cache_service.set_with_ttl(
+            f"workflow:{job_id}",
+            json.dumps(workflow_data),
+            ttl=3600 * 24,
+        )
+        return WorkflowExecuteResponse(
+            job_id=job_id,
+            status=WorkflowStatus.FAILED,
+            message=f"Workflow failed: {str(e)}",
+        )
+
+
+async def _execute_synchronously(
+    job_id: str,
+    request: WorkflowExecuteRequest,
+    workflow_data: dict,
+) -> WorkflowExecuteResponse:
+    """Execute workflow synchronously in the API process."""
+    try:
+        # Update status to running
+        workflow_data["status"] = WorkflowStatus.RUNNING.value
+        workflow_data["started_at"] = datetime.utcnow().isoformat()
+        cache_service.set_with_ttl(
+            f"workflow:{job_id}",
+            json.dumps(workflow_data),
+            ttl=3600 * 24,
+        )
+        
+        # Execute workflow
+        results = execute_workflow(
+            nodes=request.nodes,
+            edges=request.edges,
+            job_id=job_id,
+        )
+        
+        # Update with results
+        workflow_data["status"] = WorkflowStatus.COMPLETED.value
+        workflow_data["completed_at"] = datetime.utcnow().isoformat()
+        workflow_data["results"] = results.model_dump()
+        
+        # Update node statuses to completed
+        for node_id in workflow_data["node_statuses"]:
+            workflow_data["node_statuses"][node_id]["status"] = NodeStatus.COMPLETED.value
+            workflow_data["node_statuses"][node_id]["completed_at"] = datetime.utcnow().isoformat()
+        
+        cache_service.set_with_ttl(
+            f"workflow:{job_id}",
+            json.dumps(workflow_data),
+            ttl=3600 * 24,
+        )
+        
+        return WorkflowExecuteResponse(
+            job_id=job_id,
+            status=WorkflowStatus.COMPLETED,
+            message="Workflow executed successfully",
+        )
+        
+    except Exception as e:
+        logger.error(f"Synchronous workflow execution failed: {e}")
+        workflow_data["status"] = WorkflowStatus.FAILED.value
+        workflow_data["completed_at"] = datetime.utcnow().isoformat()
+        workflow_data["error"] = str(e)
+        cache_service.set_with_ttl(
+            f"workflow:{job_id}",
+            json.dumps(workflow_data),
+            ttl=3600 * 24,
+        )
+        return WorkflowExecuteResponse(
+            job_id=job_id,
+            status=WorkflowStatus.FAILED,
+            message=f"Workflow failed: {str(e)}",
         )
 
 

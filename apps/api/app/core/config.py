@@ -88,6 +88,10 @@ class Settings(BaseSettings):
     # Useful for free-tier deployments without background worker support
     SYNC_WORKFLOW_EXECUTION: bool = False
     
+    # Hugging Face Space for ML execution (alternative to local/ARQ execution)
+    # When set, workflows are sent to this HF Space for execution
+    HF_SPACE_URL: str = ""
+    
     # Rate Limiting
     RATE_LIMIT_REQUESTS_PER_MINUTE: int = 100
     
