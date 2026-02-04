@@ -24,7 +24,7 @@ packages_path = Path(__file__).parent.parent.parent.parent / "packages"
 if str(packages_path) not in sys.path:
     sys.path.insert(0, str(packages_path))
 
-from database.models import User
+from database.models import User, Model
 
 from .schemas import (
     WorkflowValidateRequest,
@@ -135,10 +135,10 @@ async def execute_workflow_endpoint(
     # Priority: HF Space > Synchronous > ARQ Worker
     if settings.HF_SPACE_URL:
         # Execute via Hugging Face Space (recommended for production)
-        return await _execute_via_hf_space(job_id, request, workflow_data)
+        return await _execute_via_hf_space(job_id, request, workflow_data, db, current_user)
     elif settings.SYNC_WORKFLOW_EXECUTION:
         # Execute synchronously - no worker needed (may timeout on Render)
-        return await _execute_synchronously(job_id, request, workflow_data)
+        return await _execute_synchronously(job_id, request, workflow_data, db, current_user)
     else:
         # Queue the job for async execution (requires ARQ worker)
         await _queue_workflow_job(job_id, request.priority)
@@ -149,10 +149,72 @@ async def execute_workflow_endpoint(
         )
 
 
+async def _save_model_to_db(
+    db: Session,
+    user: User,
+    job_id: str,
+    request: WorkflowExecuteRequest,
+    results_dict: dict,
+) -> None:
+    """Save trained model to database for display in home dashboard."""
+    try:
+        # Extract dataset info from nodes
+        dataset_name = None
+        dataset_id = None
+        for node in request.nodes:
+            if node.type == "dataset":
+                config = node.config or {}
+                dataset_name = config.get("dataset_name") or config.get("datasetName")
+                ds_id = config.get("dataset_id") or config.get("datasetId")
+                # Only use as UUID if it's a real dataset ID, not a sample ID
+                if ds_id and not config.get("is_sample", True):
+                    try:
+                        dataset_id = uuid.UUID(ds_id)
+                    except ValueError:
+                        dataset_id = None
+                break
+        
+        # Create model name
+        algo_name = results_dict.get('algorithmName') or results_dict.get('algorithm_name', 'Model')
+        completed_at = datetime.utcnow()
+        
+        if dataset_name:
+            model_name = f"{algo_name} on {dataset_name} - {completed_at.strftime('%Y-%m-%d %H:%M')}"
+        else:
+            model_name = f"{algo_name} - {completed_at.strftime('%Y-%m-%d %H:%M')}"
+        
+        # Extract metrics as dict
+        metrics = results_dict.get('metrics', [])
+        if isinstance(metrics, list):
+            metrics_dict = {m.get('key', m.get('name', '')): m.get('value', 0) for m in metrics}
+        else:
+            metrics_dict = metrics
+        
+        # Create Model record
+        model = Model(
+            user_id=user.id,
+            job_id=uuid.UUID(job_id),
+            dataset_id=dataset_id,
+            name=model_name,
+            version=dataset_name,  # Store dataset name for display
+            model_type=results_dict.get('algorithm'),
+            metrics_json=metrics_dict,
+            hyperparameters_json=results_dict.get('hyperparameters', {}),
+        )
+        db.add(model)
+        db.commit()
+        logger.info(f"Saved Model record: {model.id}")
+    except Exception as e:
+        logger.warning(f"Failed to save model to database: {e}")
+        db.rollback()
+
+
 async def _execute_via_hf_space(
     job_id: str,
     request: WorkflowExecuteRequest,
     workflow_data: dict,
+    db: Session,
+    current_user: User,
 ) -> WorkflowExecuteResponse:
     """Execute workflow via Hugging Face Space API (Gradio 4.x format)."""
     import httpx
@@ -229,6 +291,11 @@ async def _execute_via_hf_space(
                                         ttl=3600 * 24,
                                     )
                                     
+                                    # Save Model to database
+                                    await _save_model_to_db(
+                                        db, current_user, job_id, request, hf_result.get("results", {})
+                                    )
+                                    
                                     return WorkflowExecuteResponse(
                                         job_id=job_id,
                                         status=WorkflowStatus.COMPLETED,
@@ -263,6 +330,8 @@ async def _execute_synchronously(
     job_id: str,
     request: WorkflowExecuteRequest,
     workflow_data: dict,
+    db: Session,
+    current_user: User,
 ) -> WorkflowExecuteResponse:
     """Execute workflow synchronously in the API process."""
     try:
@@ -296,6 +365,11 @@ async def _execute_synchronously(
             f"workflow:{job_id}",
             json.dumps(workflow_data),
             ttl=3600 * 24,
+        )
+        
+        # Save Model to database
+        await _save_model_to_db(
+            db, current_user, job_id, request, results.model_dump()
         )
         
         return WorkflowExecuteResponse(
