@@ -271,12 +271,109 @@ def generate_plots(
             name = plot_key.replace("_", " ").title()
             
             if plot_key == "confusion_matrix" and problem_type == ProblemType.CLASSIFICATION:
+                from sklearn.metrics import ConfusionMatrixDisplay
                 cm = confusion_matrix(y_test, y_pred)
-                im = ax.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
-                ax.figure.colorbar(im, ax=ax)
-                ax.set_xlabel('Predicted')
-                ax.set_ylabel('Actual')
+                
+                # Get unique classes
+                classes = np.unique(np.concatenate([y_test, y_pred]))
+                
+                # Display with proper labels and annotations
+                disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=classes)
+                disp.plot(ax=ax, cmap=plt.cm.Blues, values_format='d')
                 ax.set_title('Confusion Matrix')
+                
+            elif plot_key == "roc_curve" and problem_type == ProblemType.CLASSIFICATION:
+                if y_pred_proba is not None:
+                    from sklearn.metrics import roc_curve, auc
+                    from sklearn.preprocessing import label_binarize
+                    
+                    classes = np.unique(y_test)
+                    n_classes = len(classes)
+                    
+                    if n_classes == 2:
+                        # Binary classification
+                        proba = y_pred_proba[:, 1] if y_pred_proba.ndim > 1 else y_pred_proba
+                        fpr, tpr, _ = roc_curve(y_test, proba)
+                        roc_auc = auc(fpr, tpr)
+                        ax.plot(fpr, tpr, lw=2, label=f'ROC curve (AUC = {roc_auc:.2f})')
+                    else:
+                        # Multiclass - plot for each class
+                        y_test_bin = label_binarize(y_test, classes=classes)
+                        for i in range(min(n_classes, 5)):  # Limit to 5 classes for readability
+                            fpr, tpr, _ = roc_curve(y_test_bin[:, i], y_pred_proba[:, i])
+                            roc_auc = auc(fpr, tpr)
+                            ax.plot(fpr, tpr, lw=2, label=f'Class {classes[i]} (AUC = {roc_auc:.2f})')
+                    
+                    ax.plot([0, 1], [0, 1], 'k--', lw=2, label='Random')
+                    ax.set_xlim([0.0, 1.0])
+                    ax.set_ylim([0.0, 1.05])
+                    ax.set_xlabel('False Positive Rate')
+                    ax.set_ylabel('True Positive Rate')
+                    ax.set_title('ROC Curve')
+                    ax.legend(loc='lower right')
+                else:
+                    plt.close(fig)
+                    continue
+                    
+            elif plot_key == "precision_recall_curve" and problem_type == ProblemType.CLASSIFICATION:
+                if y_pred_proba is not None:
+                    from sklearn.metrics import precision_recall_curve, average_precision_score
+                    from sklearn.preprocessing import label_binarize
+                    
+                    classes = np.unique(y_test)
+                    n_classes = len(classes)
+                    
+                    if n_classes == 2:
+                        proba = y_pred_proba[:, 1] if y_pred_proba.ndim > 1 else y_pred_proba
+                        precision, recall, _ = precision_recall_curve(y_test, proba)
+                        ap = average_precision_score(y_test, proba)
+                        ax.plot(recall, precision, lw=2, label=f'PR curve (AP = {ap:.2f})')
+                    else:
+                        # Multiclass
+                        y_test_bin = label_binarize(y_test, classes=classes)
+                        for i in range(min(n_classes, 5)):
+                            precision, recall, _ = precision_recall_curve(y_test_bin[:, i], y_pred_proba[:, i])
+                            ap = average_precision_score(y_test_bin[:, i], y_pred_proba[:, i])
+                            ax.plot(recall, precision, lw=2, label=f'Class {classes[i]} (AP = {ap:.2f})')
+                    
+                    ax.set_xlim([0.0, 1.0])
+                    ax.set_ylim([0.0, 1.05])
+                    ax.set_xlabel('Recall')
+                    ax.set_ylabel('Precision')
+                    ax.set_title('Precision-Recall Curve')
+                    ax.legend(loc='lower left')
+                else:
+                    plt.close(fig)
+                    continue
+                    
+            elif plot_key == "learning_curve":
+                from sklearn.model_selection import learning_curve
+                
+                # Use smaller training sizes for speed
+                train_sizes, train_scores, test_scores = learning_curve(
+                    model.__class__(**model.get_params()),
+                    np.vstack([X_train, X_test]),
+                    np.concatenate([y_train, y_test]),
+                    cv=3,
+                    n_jobs=-1,
+                    train_sizes=np.linspace(0.1, 1.0, 5),
+                    scoring='accuracy' if problem_type == ProblemType.CLASSIFICATION else 'r2',
+                )
+                
+                train_mean = np.mean(train_scores, axis=1)
+                train_std = np.std(train_scores, axis=1)
+                test_mean = np.mean(test_scores, axis=1)
+                test_std = np.std(test_scores, axis=1)
+                
+                ax.fill_between(train_sizes, train_mean - train_std, train_mean + train_std, alpha=0.1, color='blue')
+                ax.fill_between(train_sizes, test_mean - test_std, test_mean + test_std, alpha=0.1, color='orange')
+                ax.plot(train_sizes, train_mean, 'o-', color='blue', label='Training score')
+                ax.plot(train_sizes, test_mean, 'o-', color='orange', label='Cross-validation score')
+                ax.set_xlabel('Training examples')
+                ax.set_ylabel('Score')
+                ax.set_title('Learning Curve')
+                ax.legend(loc='best')
+                ax.grid(True)
                 
             elif plot_key == "feature_importance":
                 if hasattr(model, 'feature_importances_'):
@@ -288,6 +385,20 @@ def generate_plots(
                     ax.set_yticklabels(names)
                     ax.set_xlabel('Importance')
                     ax.set_title('Feature Importance')
+                elif hasattr(model, 'coef_'):
+                    # For linear models
+                    coefs = np.abs(model.coef_).flatten() if model.coef_.ndim > 1 else np.abs(model.coef_)
+                    if len(coefs) == len(feature_names):
+                        indices = np.argsort(coefs)[-10:]
+                        names = [feature_names[i] for i in indices]
+                        ax.barh(range(len(indices)), coefs[indices])
+                        ax.set_yticks(range(len(indices)))
+                        ax.set_yticklabels(names)
+                        ax.set_xlabel('Coefficient Magnitude')
+                        ax.set_title('Feature Importance (Coefficients)')
+                    else:
+                        plt.close(fig)
+                        continue
                 else:
                     plt.close(fig)
                     continue
