@@ -382,9 +382,15 @@ class WorkflowExecutor:
         
         for node in node_list:
             node_type = node.get("type")
+            
+            # Extract config - check both direct config and data.config
             config = node.get("config", {})
+            if not config and "data" in node:
+                data = node.get("data", {})
+                config = data.get("config", data)  # Use data itself if no config
             
             logger.info(f"Executing node: {node['id']} ({node_type})")
+            logger.info(f"  Config: {json.dumps(config, default=str)[:200]}")
             
             if node_type == "dataset":
                 self._execute_dataset(config)
@@ -554,11 +560,32 @@ def execute_workflow(workflow_json: str) -> str:
         JSON string with execution results
     """
     try:
-        logger.info("Received workflow execution request")
+        logger.info("=" * 50)
+        logger.info("RECEIVED WORKFLOW EXECUTION REQUEST")
+        logger.info("=" * 50)
+        
         workflow = json.loads(workflow_json)
         
         nodes = workflow.get("nodes", [])
         edges = workflow.get("edges", [])
+        
+        logger.info(f"Number of nodes: {len(nodes)}")
+        logger.info(f"Number of edges: {len(edges)}")
+        
+        # Log each node for debugging
+        for i, node in enumerate(nodes):
+            logger.info(f"Node {i}: id={node.get('id')}, type={node.get('type')}")
+            
+            # Check both 'config' and 'data.config' paths
+            config = node.get("config", {})
+            if not config and "data" in node:
+                config = node.get("data", {}).get("config", {})
+                if config:
+                    # Update node with extracted config for executor
+                    node["config"] = config
+                    logger.info(f"  -> Extracted config from data.config")
+            
+            logger.info(f"  -> Config keys: {list(config.keys()) if config else 'NONE'}")
         
         if not nodes:
             return json.dumps({"error": "No nodes in workflow"})
@@ -570,7 +597,9 @@ def execute_workflow(workflow_json: str) -> str:
         return json.dumps({"status": "completed", "results": results})
         
     except Exception as e:
+        import traceback
         logger.error(f"Workflow execution failed: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return json.dumps({"status": "failed", "error": str(e)})
 
 
