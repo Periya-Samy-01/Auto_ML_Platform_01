@@ -8,28 +8,28 @@ The AutoML Platform uses a **three-tier architecture** deployed across multiple 
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              USER BROWSER                                    │
+│                              USER BROWSER                                   │
 └─────────────────────────────────────────────────────────────────────────────┘
                                      │
                                      ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                        FRONTEND (Vercel)                                     │
-│                        Next.js Application                                   │
+│                        FRONTEND (Vercel)                                    │
+│                        Next.js Application                                  │
 │                        https://your-app.vercel.app                          │
 └─────────────────────────────────────────────────────────────────────────────┘
                                      │
                                      ▼ REST API calls
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         BACKEND (Render)                                     │
-│                         FastAPI Application                                  │
+│                         BACKEND (Render)                                    │
+│                         FastAPI Application                                 │
 │                         https://your-api.onrender.com                       │
 └─────────────────────────────────────────────────────────────────────────────┘
                                      │
                     ┌────────────────┴────────────────┐
-                    ▼                                  ▼
+                    ▼                                 ▼
 ┌──────────────────────────────┐    ┌────────────────────────────────────────┐
-│   PostgreSQL Database        │    │       HF SPACE (ML Worker)              │
-│   (Supabase/Neon)           │    │       Gradio Application                │
+│   PostgreSQL Database        │    │       HF SPACE (ML Worker)             │
+│   (Supabase/Neon)   m        │    │       Gradio Application               │
 │                              │    │       https://user-worker.hf.space     │
 └──────────────────────────────┘    └────────────────────────────────────────┘
 ```

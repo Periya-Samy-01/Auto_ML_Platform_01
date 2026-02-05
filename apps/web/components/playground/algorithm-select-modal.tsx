@@ -12,14 +12,11 @@ interface AlgorithmSelectModalProps {
     onSelect: (algorithmId: AlgorithmId) => void;
 }
 
-// Category display configuration
-const categoryConfig: Record<string, { label: string; icon: string; order: number }> = {
-    linear: { label: "Linear Models", icon: "📈", order: 1 },
-    tree: { label: "Tree-Based", icon: "🌳", order: 2 },
-    ensemble: { label: "Ensemble Methods", icon: "🌲", order: 3 },
-    neural: { label: "Neural Networks", icon: "🧠", order: 4 },
-    clustering: { label: "Clustering", icon: "🎯", order: 5 },
-    dimensionality: { label: "Dimensionality Reduction", icon: "📉", order: 6 },
+// Task-based display configuration (grouped by problem type)
+const taskConfig: Record<string, { label: string; icon: string; order: number }> = {
+    classification: { label: "Classification", icon: "🏷️", order: 1 },
+    regression: { label: "Regression", icon: "📈", order: 2 },
+    clustering: { label: "Clustering", icon: "🎯", order: 3 },
 };
 
 export function AlgorithmSelectModal({
@@ -29,7 +26,7 @@ export function AlgorithmSelectModal({
 }: AlgorithmSelectModalProps) {
     const [searchQuery, setSearchQuery] = useState("");
 
-    // Group algorithms by category
+    // Group algorithms by task (problem type)
     const groupedAlgorithms = useMemo(() => {
         const groups: Record<
             string,
@@ -46,35 +43,49 @@ export function AlgorithmSelectModal({
         Object.entries(algorithmRegistry).forEach(([id, config]) => {
             if (!config) return;
 
-            const category = config.metadata.category;
-            if (!groups[category]) {
-                groups[category] = [];
-            }
-
             // Filter by search query
             const matchesSearch =
                 !searchQuery ||
                 config.metadata.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 config.metadata.description.toLowerCase().includes(searchQuery.toLowerCase());
 
-            if (matchesSearch) {
-                groups[category].push({
-                    id: id as AlgorithmId,
-                    name: config.metadata.name,
-                    shortName: config.metadata.shortName,
-                    icon: config.metadata.icon,
-                    description: config.metadata.description,
-                    category: config.metadata.category,
+            if (!matchesSearch) return;
+
+            const algorithmData = {
+                id: id as AlgorithmId,
+                name: config.metadata.name,
+                shortName: config.metadata.shortName,
+                icon: config.metadata.icon,
+                description: config.metadata.description,
+                category: config.metadata.category,
+            };
+
+            // Add algorithm to each problem type it supports
+            const problemTypes = config.capabilities.problemTypes;
+
+            // Handle clustering (K-Means doesn't have problemTypes, but has category)
+            if (config.metadata.category === "clustering") {
+                if (!groups["clustering"]) {
+                    groups["clustering"] = [];
+                }
+                groups["clustering"].push(algorithmData);
+            } else {
+                // Add to each problem type group
+                problemTypes.forEach((problemType) => {
+                    if (!groups[problemType]) {
+                        groups[problemType] = [];
+                    }
+                    groups[problemType].push(algorithmData);
                 });
             }
         });
 
-        // Sort categories by order and filter empty ones
+        // Sort groups by order and filter empty ones
         return Object.entries(groups)
             .filter(([, algorithms]) => algorithms.length > 0)
             .sort(([a], [b]) => {
-                const orderA = categoryConfig[a]?.order ?? 99;
-                const orderB = categoryConfig[b]?.order ?? 99;
+                const orderA = taskConfig[a]?.order ?? 99;
+                const orderB = taskConfig[b]?.order ?? 99;
                 return orderA - orderB;
             });
     }, [searchQuery]);
@@ -146,15 +157,15 @@ export function AlgorithmSelectModal({
 
                 {/* Algorithm List */}
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6">
-                    {groupedAlgorithms.map(([category, algorithms]) => (
-                        <div key={category}>
-                            {/* Category Header */}
+                    {groupedAlgorithms.map(([taskType, algorithms]) => (
+                        <div key={taskType}>
+                            {/* Task Header */}
                             <div className="flex items-center gap-2 mb-3 px-2">
                                 <span className="text-base">
-                                    {categoryConfig[category]?.icon ?? "📦"}
+                                    {taskConfig[taskType]?.icon ?? "📦"}
                                 </span>
                                 <span className="text-sm font-medium text-zinc-400">
-                                    {categoryConfig[category]?.label ?? category}
+                                    {taskConfig[taskType]?.label ?? taskType}
                                 </span>
                                 <div className="flex-1 h-px bg-white/10" />
                             </div>
