@@ -31,14 +31,11 @@ export interface NodeType {
 
 export const nodeTypes: NodeType[] = [
   { type: "dataset", label: "Dataset", icon: "📊", description: "Load a dataset" },
-  { type: "split", label: "Train/Test Split", icon: "✂️", description: "Split data into train/test sets" },
   { type: "preprocessing", label: "Preprocessing", icon: "🔧", description: "Clean and preprocess data" },
-  { type: "feature", label: "Feature Engineering", icon: "⚡", description: "Create new features" },
+  { type: "split", label: "Train/Test Split", icon: "✂️", description: "Split data into train/test sets" },
   { type: "model", label: "Model", icon: "🤖", description: "Train a model" },
-  { type: "ensemble", label: "Ensemble", icon: "🎭", description: "Combine multiple models" },
   { type: "evaluate", label: "Evaluate", icon: "📈", description: "Evaluate performance" },
   { type: "visualize", label: "Visualize", icon: "📊", description: "Create visualizations" },
-  { type: "save", label: "Save", icon: "💾", description: "Save model or results" },
 ];
 
 interface CanvasToolbarProps {
