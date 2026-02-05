@@ -23,7 +23,7 @@ const navigation = [
   { name: "Datasets", href: "/dashboard/datasets", icon: Database },
   { name: "Workflows", href: "/dashboard/workflows", icon: GitBranch },
   { name: "Jobs", href: "/dashboard/jobs", icon: Play },
-  { name: "Models", href: "/dashboard/models", icon: Brain },
+  { name: "Compare", href: "/dashboard/models", icon: Brain },
   { name: "Tutorials", href: "/tutorials", icon: GraduationCap },
 ];
 

@@ -19,7 +19,7 @@ const pageTitles: Record<string, string> = {
   "/dashboard": "Home",
   "/dashboard/learn": "Learn",
   "/dashboard/datasets": "Datasets",
-  "/dashboard/models": "Models",
+  "/dashboard/models": "Compare",
 };
 
 export function DashboardNavbar() {

@@ -50,7 +50,7 @@ const mainNavItems = [
     icon: Database,
   },
   {
-    title: "Models",
+    title: "Compare",
     url: "/dashboard/models",
     icon: Box,
   },
