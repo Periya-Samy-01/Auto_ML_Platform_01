@@ -1,2 +1,0 @@
-neon = psql 'postgresql://neondb_owner:npg_D1XkmMzaNV9p@ep-cool-breeze-a1x9zqer-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
-redis = redis-cli --tls -u redis://default:AV6jAAIncDI1OGNmZWFmN2I0Y2M0YjNhODA3ZGU1MTBhYzcyY2I5MnAyMjQyMjc@smiling-mayfly-24227.upstash.io:6379

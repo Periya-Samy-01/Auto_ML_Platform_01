@@ -149,10 +149,6 @@ When a workflow is executed, it becomes a **job**. Jobs run in the background an
 4. **Completed** - Job finished successfully
 5. **Failed** - Job encountered an error
 
-### Credits
-
-The platform uses a **credit system** to track usage. Running jobs consumes credits, and users can purchase more credits when needed.
-
 ---
 
 ## Getting Started (Local Development)
