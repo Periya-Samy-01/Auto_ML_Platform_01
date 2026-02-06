@@ -134,13 +134,26 @@ async def download_model(
     """
     from fastapi.responses import FileResponse
     import os
+    import logging
+    
+    logger = logging.getLogger(__name__)
 
     model = get_model_by_id(db=db, user=current_user, model_id=model_id)
     
-    if not model.s3_model_path or not os.path.exists(model.s3_model_path):
-        raise HTTPException(status_code=404, detail="Model file not found")
+    logger.info(f"Downloading model {model_id}")
+    logger.info(f"Model path in DB: {model.s3_model_path}")
+    
+    if not model.s3_model_path:
+        logger.error("Model path is missing in DB")
+        raise HTTPException(status_code=404, detail="Model file not found (no path)")
+        
+    if not os.path.exists(model.s3_model_path):
+        logger.error(f"File not found on disk at: {model.s3_model_path}")
+        raise HTTPException(status_code=404, detail=f"Model file not found on disk")
         
     filename = f"{model.name.replace(' ', '_')}.joblib" if model.name else "model.joblib"
+    
+    logger.info(f"Serving file: {model.s3_model_path}")
     
     return FileResponse(
         path=model.s3_model_path,
