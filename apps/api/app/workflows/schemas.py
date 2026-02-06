@@ -253,6 +253,7 @@ class WorkflowResults(CamelCaseModel):
 
     # Model artifacts
     model_path: Optional[str] = None  # Path in object storage
+    model_base64: Optional[str] = None  # Base64 encoded model content (for transfer)
 
     # Dataset info
     train_samples: int

@@ -230,6 +230,37 @@ async def handle_workflow_job(ctx: Dict[str, Any], job_id: str) -> Dict[str, Any
             else:
                 model_name = f"{algo_name} - {completed_at_dt.strftime('%Y-%m-%d %H:%M')}"
             
+            # Handle model file transfer (base64)
+            model_path = results_dict.get('model_path')
+            model_base64 = results_dict.get('model_base64')
+            
+            if model_base64:
+                try:
+                    import base64
+                    import os
+                    
+                    # Create outputs directory
+                    # apps/api/app/worker.py -> ../../../..
+                    current_dir = os.path.dirname(os.path.abspath(__file__))
+                    project_root = os.path.abspath(os.path.join(current_dir, "../../../.."))
+                    models_dir = os.path.join(project_root, "outputs", "models")
+                    os.makedirs(models_dir, exist_ok=True)
+                    
+                    # Generate local filename
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    filename = f"model_{job_id}_{timestamp}.joblib"
+                    local_path = os.path.join(models_dir, filename)
+                    
+                    # Save decoded content
+                    with open(local_path, "wb") as f:
+                        f.write(base64.b64decode(model_base64))
+                    
+                    logger.info(f"Saved transferred model to {local_path}")
+                    model_path = local_path
+                    
+                except Exception as e:
+                    logger.error(f"Failed to save transferred model: {e}")
+
             model = Model(
                 user_id=uuid.UUID(user_id) if user_id else None,
                 job_id=uuid.UUID(job_id),
@@ -238,7 +269,7 @@ async def handle_workflow_job(ctx: Dict[str, Any], job_id: str) -> Dict[str, Any
                 # Store dataset_name in version field for display (works for both sample and real datasets)
                 version=dataset_name if dataset_name else None,
                 model_type=results_dict.get('algorithm'),
-                s3_model_path=results_dict.get('model_path'),
+                s3_model_path=model_path,
                 metrics_json={
                     m['key']: m['value'] for m in results_dict.get('metrics', [])
                 } if results_dict.get('metrics') else {},

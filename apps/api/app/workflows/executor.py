@@ -489,6 +489,16 @@ class WorkflowExecutor:
             except Exception as e:
                 logger.error(f"Failed to save model: {e}")
 
+        # Read model as base64 for transfer if path exists
+        model_base64 = None
+        if model_path and os.path.exists(model_path):
+            try:
+                import base64
+                with open(model_path, "rb") as f:
+                    model_base64 = base64.b64encode(f.read()).decode("utf-8")
+            except Exception as e:
+                logger.error(f"Failed to encode model: {e}")
+
         return WorkflowResults(
             algorithm=self.context.algorithm or "unknown",
             algorithm_name=self.context.algorithm_name or "Unknown",
@@ -503,6 +513,7 @@ class WorkflowExecutor:
             features_count=len(self.context.feature_names),
             credits_used=0,  # Credits system removed
             model_path=model_path,
+            model_base64=model_base64,
         )
 
 

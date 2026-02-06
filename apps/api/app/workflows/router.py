@@ -190,6 +190,39 @@ async def _save_model_to_db(
         else:
             metrics_dict = metrics
         
+        # Handle model file transfer (base64)
+        model_path = results_dict.get('model_path')
+        model_base64 = results_dict.get('model_base64')
+        
+        if model_base64:
+            try:
+                import base64
+                import os
+                
+                # Create outputs directory
+                # Navigate 4 levels up from apps/api/app/workflows/router.py
+                current_dir = os.path.dirname(os.path.abspath(__file__))
+                project_root = os.path.abspath(os.path.join(current_dir, "../../../.."))
+                models_dir = os.path.join(project_root, "outputs", "models")
+                os.makedirs(models_dir, exist_ok=True)
+                
+                # Generate local filename
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                # Use job_id if available, otherwise random
+                file_job_id = job_id or str(uuid.uuid4())
+                filename = f"model_{file_job_id}_{timestamp}.joblib"
+                local_path = os.path.join(models_dir, filename)
+                
+                # Save decoded content
+                with open(local_path, "wb") as f:
+                    f.write(base64.b64decode(model_base64))
+                
+                logger.info(f"Saved transferred model to {local_path}")
+                model_path = local_path
+                
+            except Exception as e:
+                logger.error(f"Failed to save transferred model: {e}")
+        
         # Create Model record (job_id is None since we don't create Job records for sync/HF execution)
         model = Model(
             user_id=user.id,
@@ -198,6 +231,7 @@ async def _save_model_to_db(
             name=model_name,
             version=dataset_name,  # Store dataset name for display
             model_type=results_dict.get('algorithm'),
+            s3_model_path=model_path,
             metrics_json=metrics_dict,
             hyperparameters_json=results_dict.get('hyperparameters', {}),
         )
