@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useReactTable, getCoreRowModel, ColumnDef } from "@tanstack/react-table";
 import { api } from "@/lib/axios";
 import { format } from "date-fns";
-import { Inbox, Loader2, Trash2 } from "lucide-react";
+import { Inbox, Loader2, Trash2, Download } from "lucide-react";
 import { DataGrid, DataGridContainer } from "@/components/ui/data-grid";
 import { DataGridTable } from "@/components/ui/data-grid-table";
 import {
@@ -46,11 +46,11 @@ interface WorkflowRow extends ModelBrief {
 }
 
 // Delete button cell component
-function DeleteCell({ 
-  row, 
-  onDeleteClick 
-}: { 
-  row: WorkflowRow; 
+function DeleteCell({
+  row,
+  onDeleteClick
+}: {
+  row: WorkflowRow;
   onDeleteClick: (row: WorkflowRow) => void;
 }) {
   return (
@@ -66,6 +66,65 @@ function DeleteCell({
       <Trash2 className="h-4 w-4" />
     </Button>
   );
+
+}
+
+// Download button cell component
+function DownloadCell({
+  row
+}: {
+  row: WorkflowRow;
+}) {
+  const handleDownload = async () => {
+    try {
+      const response = await api.get(`/models/${row.id}/download`, {
+        responseType: "blob",
+      });
+
+      // Create blob link to download
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+
+      // Get filename from header or use default
+      const contentDisposition = response.headers["content-disposition"];
+      let filename = "model.joblib";
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (filenameMatch && filenameMatch.length === 2)
+          filename = filenameMatch[1];
+      } else if (row.name) {
+        filename = `${row.name.replace(/\s+/g, '_')}.joblib`;
+      }
+
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+
+      // Cleanup
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success("Download started");
+    } catch (err) {
+      console.error("Failed to download model:", err);
+      toast.error("Failed to download model. File might not exist.");
+    }
+  };
+
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
+      onClick={(e) => {
+        e.stopPropagation();
+        handleDownload();
+      }}
+      title="Download Model (joblib)"
+    >
+      <Download className="h-4 w-4" />
+    </Button>
+  );
 }
 
 export function WorkflowsTable() {
@@ -73,7 +132,7 @@ export function WorkflowsTable() {
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [workflowToDelete, setWorkflowToDelete] = useState<WorkflowRow | null>(null);
@@ -207,7 +266,10 @@ export function WorkflowsTable() {
       header: "",
       size: 60,
       cell: ({ row }) => (
-        <DeleteCell row={row.original} onDeleteClick={handleDeleteClick} />
+        <div className="flex items-center">
+          <DownloadCell row={row.original} />
+          <DeleteCell row={row.original} onDeleteClick={handleDeleteClick} />
+        </div>
       ),
     },
   ];
@@ -266,7 +328,7 @@ export function WorkflowsTable() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Workflow</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete &quot;{workflowToDelete?.name || "Untitled Workflow"}&quot;? 
+              Are you sure you want to delete &quot;{workflowToDelete?.name || "Untitled Workflow"}&quot;?
               This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>

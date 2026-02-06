@@ -238,6 +238,7 @@ async def handle_workflow_job(ctx: Dict[str, Any], job_id: str) -> Dict[str, Any
                 # Store dataset_name in version field for display (works for both sample and real datasets)
                 version=dataset_name if dataset_name else None,
                 model_type=results_dict.get('algorithm'),
+                s3_model_path=results_dict.get('model_path'),
                 metrics_json={
                     m['key']: m['value'] for m in results_dict.get('metrics', [])
                 } if results_dict.get('metrics') else {},

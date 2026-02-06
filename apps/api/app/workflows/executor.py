@@ -455,6 +455,39 @@ class WorkflowExecutor:
         # Determine training mode
         training_mode = "single"
         # TODO: Track CV/Optuna mode
+        
+        # Save model if exists
+        model_path = None
+        if self.context.model is not None:
+            try:
+                import os
+                import joblib
+                
+                # Create outputs directory if it doesn't exist
+                # Use absolute path relative to project root
+                # apps/api/app/workflows/executor.py -> ../../../..
+                # We want to save to c:/Folders/AutoML Platform 2.0/outputs/models
+                
+                # Get project root from current file path
+                current_dir = os.path.dirname(os.path.abspath(__file__))
+                project_root = os.path.abspath(os.path.join(current_dir, "../../../.."))
+                models_dir = os.path.join(project_root, "outputs", "models")
+                os.makedirs(models_dir, exist_ok=True)
+                
+                # Generate filename
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                filename = f"model_{self.job_id}_{timestamp}.joblib"
+                full_path = os.path.join(models_dir, filename)
+                
+                # Save model
+                joblib.dump(self.context.model, full_path)
+                logger.info(f"Saved model to {full_path}")
+                
+                # Store relative path or absolute path - storing absolute for simplicity in this environment
+                model_path = full_path
+                
+            except Exception as e:
+                logger.error(f"Failed to save model: {e}")
 
         return WorkflowResults(
             algorithm=self.context.algorithm or "unknown",
@@ -469,6 +502,7 @@ class WorkflowExecutor:
             test_samples=len(self.context.X_test) if self.context.X_test is not None else 0,
             features_count=len(self.context.feature_names),
             credits_used=0,  # Credits system removed
+            model_path=model_path,
         )
 
 

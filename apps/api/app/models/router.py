@@ -118,17 +118,32 @@ async def get_model(
     )
 
 
-@router.delete("/{model_id}")
-async def delete_model_endpoint(
+    delete_model(db=db, user=current_user, model_id=model_id)
+    
+    return {"message": "Model deleted successfully"}
+
+
+@router.get("/{model_id}/download")
+async def download_model(
     model_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
-    Delete a trained model by ID.
-    
-    Only the owner of the model can delete it.
+    Download trained model file.
     """
-    delete_model(db=db, user=current_user, model_id=model_id)
+    from fastapi.responses import FileResponse
+    import os
+
+    model = get_model_by_id(db=db, user=current_user, model_id=model_id)
     
-    return {"message": "Model deleted successfully"}
+    if not model.s3_model_path or not os.path.exists(model.s3_model_path):
+        raise HTTPException(status_code=404, detail="Model file not found")
+        
+    filename = f"{model.name.replace(' ', '_')}.joblib" if model.name else "model.joblib"
+    
+    return FileResponse(
+        path=model.s3_model_path,
+        filename=filename,
+        media_type="application/octet-stream"
+    )
