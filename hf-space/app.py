@@ -702,11 +702,54 @@ def execute_workflow(workflow_json: str) -> str:
         if not nodes:
             return json.dumps({"error": "No nodes in workflow"})
         
-        executor = WorkflowExecutor(nodes, edges)
-        results = executor.execute()
+        # Execute workflow first
+        executor.execute()
+        
+        # Save model and encode
+        model_path = None
+        model_base64 = None
+        
+        if executor.model is not None:
+            try:
+                import joblib
+                import os
+                import tempfile
+                
+                # Create temp file for model
+                fd, model_path = tempfile.mkstemp(suffix=".joblib")
+                os.close(fd)
+                
+                joblib.dump(executor.model, model_path)
+                logger.info(f"Saved model to {model_path}")
+                
+                # Read as base64
+                with open(model_path, "rb") as f:
+                    model_base64 = base64.b64encode(f.read()).decode("utf-8")
+                    
+            except Exception as e:
+                logger.error(f"Failed to save/encode model: {e}")
+
+        total_time = time.time() - start_time
+        
+        results_data = {
+            "algorithm": executor.algorithm or "unknown",
+            "algorithmName": executor.algorithm.replace("_", " ").title() if executor.algorithm else "Unknown",
+            "problemType": executor.problem_type.value if executor.problem_type else "unknown",
+            "trainingMode": "single",
+            "trainingTimeSeconds": executor.training_time,
+            "hyperparameters": executor.hyperparameters,
+            "metrics": executor.metrics,
+            "plots": executor.plots,
+            "trainSamples": len(executor.X_train) if executor.X_train is not None else 0,
+            "testSamples": len(executor.X_test) if executor.X_test is not None else 0,
+            "featuresCount": len(executor.feature_names),
+            "creditsUsed": 0,
+            "model_path": model_path,
+            "model_base64": model_base64,
+        }
         
         logger.info("Workflow execution completed successfully")
-        return json.dumps({"status": "completed", "results": results})
+        return json.dumps({"status": "completed", "results": results_data})
         
     except Exception as e:
         import traceback
