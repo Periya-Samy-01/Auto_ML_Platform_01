@@ -676,6 +676,8 @@ def execute_workflow(workflow_json: str) -> str:
         logger.info("RECEIVED WORKFLOW EXECUTION REQUEST")
         logger.info("=" * 50)
         
+        start_time = time.time()
+        
         workflow = json.loads(workflow_json)
         
         nodes = workflow.get("nodes", [])
@@ -702,6 +704,8 @@ def execute_workflow(workflow_json: str) -> str:
         if not nodes:
             return json.dumps({"error": "No nodes in workflow"})
         
+        executor = WorkflowExecutor(nodes, edges)
+
         # Execute workflow first
         executor.execute()
         
@@ -785,6 +789,7 @@ demo = gr.Interface(
             "edges": []
         }, indent=2)]
     ],
+    cache_examples=False,
 )
 
 
