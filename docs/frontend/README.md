@@ -226,3 +226,4 @@ npm start
 | [Playground Canvas](./playground-canvas.md) | React Flow canvas system |
 | [Stores](./stores.md) | Zustand state management |
 | [Types](./types.md) | TypeScript type definitions |
+| [Mobile Learn Mode](./mobile-learn-mode.md) | Mobile-specific behavior and layout |
