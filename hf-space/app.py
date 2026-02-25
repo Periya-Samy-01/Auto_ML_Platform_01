@@ -187,6 +187,43 @@ def get_model(algorithm: str, hyperparameters: Dict, problem_type: ProblemType):
             random_state=42,
         )
     
+    elif algorithm == "neural_network":
+        from sklearn.neural_network import MLPClassifier, MLPRegressor
+        
+        # Handle hidden_layer_sizes conversion from string/list to tuple
+        hidden_layers = hyperparameters.get("hidden_layer_sizes", "(100,)")
+        if isinstance(hidden_layers, str):
+            # Convert string representation like "(100,)" to tuple
+            hidden_layers = eval(hidden_layers)
+        elif isinstance(hidden_layers, list):
+            # Convert list to tuple
+            hidden_layers = tuple(hidden_layers)
+        
+        # Handle batch_size conversion
+        batch_size = hyperparameters.get("batch_size", "auto")
+        if batch_size != "auto":
+            try:
+                batch_size = int(batch_size)
+            except (ValueError, TypeError):
+                batch_size = "auto"
+        
+        # Common parameters
+        params = {
+            "hidden_layer_sizes": hidden_layers,
+            "activation": hyperparameters.get("activation", "relu"),
+            "solver": hyperparameters.get("solver", "adam"),
+            "learning_rate_init": hyperparameters.get("learning_rate_init", 0.001),
+            "max_iter": hyperparameters.get("max_iter", 200),
+            "early_stopping": hyperparameters.get("early_stopping", True),
+            "alpha": hyperparameters.get("alpha", 0.0001),
+            "batch_size": batch_size,
+            "random_state": 42,
+        }
+        
+        if problem_type == ProblemType.REGRESSION:
+            return MLPRegressor(**params)
+        return MLPClassifier(**params)
+    
     else:
         raise ValueError(f"Unknown algorithm: {algorithm}")
 
@@ -444,6 +481,18 @@ def generate_plots(
 
 
 # =============================================================================
+# PREPROCESSING HELPERS
+# =============================================================================
+
+def _resolve_columns(col_selection, available_cols: list) -> list:
+    """Resolve column selection to a list of column names."""
+    if isinstance(col_selection, list):
+        return [c for c in col_selection if c in available_cols]
+    # String selectors like "all_numeric", "all_categorical", "all" → use all available
+    return available_cols
+
+
+# =============================================================================
 # WORKFLOW EXECUTOR
 # =============================================================================
 
@@ -506,6 +555,8 @@ class WorkflowExecutor:
             
             if node_type == "dataset":
                 self._execute_dataset(config)
+            elif node_type == "preprocessing":
+                self._execute_preprocessing(config)
             elif node_type in ("trainTestSplit", "split"):  # Handle both names
                 self._execute_split(config)
             elif node_type == "model":
@@ -549,6 +600,131 @@ class WorkflowExecutor:
             raise ValueError("Only sample datasets are supported in HF Space")
         
         logger.info(f"Loaded dataset with shape: {self.raw_data.shape}")
+    
+    def _execute_preprocessing(self, config: Dict):
+        """Apply preprocessing operations to the raw data."""
+        operations = config.get("operations", [])
+        
+        if self.raw_data is None:
+            raise ValueError("No data available for preprocessing")
+        
+        if not operations:
+            logger.info("No preprocessing operations configured, skipping")
+            return
+        
+        df = self.raw_data.copy()
+        target_col = self.target_column
+        
+        for op in operations:
+            op_type = op.get("type", "")
+            params = op.get("params") or op.get("config", {})
+            
+            try:
+                logger.info(f"Applying preprocessing: {op_type} with params: {params}")
+                
+                # Identify column types (exclude target)
+                feature_cols = [c for c in df.columns if c != target_col]
+                numeric_cols = df[feature_cols].select_dtypes(include=[np.number]).columns.tolist()
+                categorical_cols = df[feature_cols].select_dtypes(include=["object", "category"]).columns.tolist()
+                
+                # Determine which columns to apply to
+                col_selection = params.get("columns", "all_numeric")
+                
+                if op_type == "fill_missing":
+                    strategy = params.get("strategy", "mean")
+                    fill_value = params.get("fillValue") or params.get("fill_value")
+                    
+                    if strategy == "constant" and fill_value is not None:
+                        df[numeric_cols] = df[numeric_cols].fillna(float(fill_value) if fill_value else 0)
+                        if categorical_cols:
+                            df[categorical_cols] = df[categorical_cols].fillna(str(fill_value) if fill_value else "missing")
+                    elif strategy in ("mean", "median"):
+                        from sklearn.impute import SimpleImputer
+                        if numeric_cols:
+                            imputer = SimpleImputer(strategy=strategy)
+                            df[numeric_cols] = imputer.fit_transform(df[numeric_cols])
+                    elif strategy == "mode":
+                        from sklearn.impute import SimpleImputer
+                        if numeric_cols:
+                            imputer = SimpleImputer(strategy="most_frequent")
+                            df[numeric_cols] = imputer.fit_transform(df[numeric_cols])
+                        if categorical_cols:
+                            imputer = SimpleImputer(strategy="most_frequent")
+                            df[categorical_cols] = imputer.fit_transform(df[categorical_cols])
+                
+                elif op_type == "scale_standard":
+                    from sklearn.preprocessing import StandardScaler
+                    target_cols = _resolve_columns(col_selection, numeric_cols)
+                    if target_cols:
+                        scaler = StandardScaler()
+                        df[target_cols] = scaler.fit_transform(df[target_cols])
+                
+                elif op_type == "scale_minmax":
+                    from sklearn.preprocessing import MinMaxScaler
+                    feature_range_min = params.get("rangeMin", params.get("range_min", 0))
+                    feature_range_max = params.get("rangeMax", params.get("range_max", 1))
+                    target_cols = _resolve_columns(col_selection, numeric_cols)
+                    if target_cols:
+                        scaler = MinMaxScaler(feature_range=(feature_range_min, feature_range_max))
+                        df[target_cols] = scaler.fit_transform(df[target_cols])
+                
+                elif op_type == "scale_robust":
+                    from sklearn.preprocessing import RobustScaler
+                    target_cols = _resolve_columns(col_selection, numeric_cols)
+                    if target_cols:
+                        scaler = RobustScaler()
+                        df[target_cols] = scaler.fit_transform(df[target_cols])
+                
+                elif op_type == "encode_onehot":
+                    target_cols = _resolve_columns(col_selection, categorical_cols) if col_selection != "all_numeric" else categorical_cols
+                    if target_cols:
+                        df = pd.get_dummies(df, columns=target_cols, drop_first=False)
+                
+                elif op_type == "encode_label":
+                    from sklearn.preprocessing import LabelEncoder
+                    target_cols = _resolve_columns(col_selection, categorical_cols) if col_selection != "all_numeric" else categorical_cols
+                    for col in target_cols:
+                        le = LabelEncoder()
+                        df[col] = le.fit_transform(df[col].astype(str))
+                
+                elif op_type == "remove_duplicates":
+                    before = len(df)
+                    df = df.drop_duplicates()
+                    logger.info(f"Removed {before - len(df)} duplicate rows")
+                
+                elif op_type == "remove_outliers_iqr":
+                    threshold = params.get("threshold", 1.5)
+                    target_cols = _resolve_columns(col_selection, numeric_cols)
+                    for col in target_cols:
+                        Q1 = df[col].quantile(0.25)
+                        Q3 = df[col].quantile(0.75)
+                        IQR = Q3 - Q1
+                        df = df[(df[col] >= Q1 - threshold * IQR) & (df[col] <= Q3 + threshold * IQR)]
+                
+                elif op_type == "remove_outliers_zscore":
+                    from scipy import stats
+                    threshold = params.get("threshold", 3.0)
+                    target_cols = _resolve_columns(col_selection, numeric_cols)
+                    for col in target_cols:
+                        z = np.abs(stats.zscore(df[col].dropna()))
+                        df = df[z < threshold]
+                
+                elif op_type == "drop_columns":
+                    columns_to_drop = params.get("columns", [])
+                    if isinstance(columns_to_drop, list) and columns_to_drop:
+                        existing = [c for c in columns_to_drop if c in df.columns]
+                        if existing:
+                            df = df.drop(columns=existing)
+                            logger.info(f"Dropped columns: {existing}")
+                
+                else:
+                    logger.warning(f"Unknown preprocessing operation: {op_type}")
+                    
+            except Exception as e:
+                logger.warning(f"Preprocessing operation '{op_type}' failed: {e}")
+        
+        self.raw_data = df
+        logger.info(f"Preprocessing complete. Shape: {df.shape}")
     
     def _execute_split(self, config: Dict):
         """Split data into train/test sets."""

@@ -118,6 +118,15 @@ async def get_model(
     )
 
 
+@router.delete("/{model_id}")
+async def delete_model_endpoint(
+    model_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Delete a model and its associated file.
+    """
     delete_model(db=db, user=current_user, model_id=model_id)
     
     return {"message": "Model deleted successfully"}

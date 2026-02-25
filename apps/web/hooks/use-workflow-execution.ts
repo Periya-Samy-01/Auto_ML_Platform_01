@@ -145,6 +145,18 @@ function transformConfig(nodeType: string, config: Record<string, unknown>): Rec
     }
   }
 
+  // Handle preprocessing node
+  if (nodeType === "preprocessing" || nodeType === "featureEngineering") {
+    if (config.operations) {
+      transformed.operations = (config.operations as Record<string, unknown>[]).map(
+        (op: Record<string, unknown>) => ({
+          type: op.type,
+          params: op.config || {},
+        })
+      );
+    }
+  }
+
   // Handle evaluate node
   if (nodeType === "evaluate") {
     if (config.selectedMetrics !== undefined) {

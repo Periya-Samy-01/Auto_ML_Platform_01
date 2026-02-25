@@ -103,4 +103,15 @@ def delete_model(
     db.delete(model)
     db.commit()
     
+    # Delete physical file if it exists
+    if model.s3_model_path:
+        import os
+        try:
+            if os.path.exists(model.s3_model_path):
+                os.remove(model.s3_model_path)
+                logger.info(f"Deleted model file: {model.s3_model_path}")
+        except Exception as e:
+            logger.error(f"Failed to delete model file {model.s3_model_path}: {e}")
+            # Don't raise error, as DB record is already deleted
+    
     logger.info(f"Deleted model {model_id} for user {user.id}")
