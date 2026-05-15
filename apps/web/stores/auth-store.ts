@@ -141,5 +141,10 @@ export const clearStoredTokens = () => {
   if (typeof window !== "undefined") {
     localStorage.removeItem(TOKEN_KEYS.ACCESS);
     localStorage.removeItem(TOKEN_KEYS.REFRESH);
+    
+    // Crucial: we must clear the Zustand store state as well,
+    // otherwise the persist middleware will keep isAuthenticated=true
+    // causing an infinite redirect loop between /auth/login and /dashboard
+    useAuthStore.getState().logout();
   }
 };
