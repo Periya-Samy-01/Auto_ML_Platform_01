@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useAuthStore } from "@/stores/auth-store";
 import { OAuthButtons } from "@/components/auth";
 import { Card } from "@/components/ui/card";
+import { Github, Linkedin } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -71,18 +72,30 @@ export default function LoginPage() {
               
               <ul className="space-y-4 text-sm text-indigo-100/90 mt-6">
                 {[
-                  "Platform maintenance is scheduled for this weekend. Expect brief downtimes.",
-                  "New state-of-the-art models have been deployed to the platform registry.",
-                  "We've updated our API rate limits. Please check the new documentation.",
-                  "Security update: Ensure your access tokens are rotated every 30 days.",
-                  "Join our upcoming webinar on optimizing AutoML pipelines for production."
+                  { title: "Render Cold Starts", desc: "NodeForge runs entirely on community free-tier hosting. If the app has been idle, please allow 1 to 2 minutes for the initial server to spin up and process your login." },
+                  { title: "Temporary Redis Cache", desc: "Active workspace configurations and pipeline states use temporary cache sessions. Pipelines automatically reset after a period of inactivity to preserve resources." },
+                  { title: "Fully Open Source", desc: "This platform is completely open-source. You are fully welcome to clone, copy, or modify any part of the architecture for your own personal or commercial projects." },
+                  { title: "Instance Assistance", desc: "If you encounter a hard timeout, a broken canvas state, or need the database manually refreshed, connect with me directly via GitHub or LinkedIn to request a quick reboot." }
                 ].map((item, i) => (
                   <li key={i} className="flex items-start gap-3">
                     <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full border border-fuchsia-400 bg-fuchsia-500/20 shadow-[0_0_10px_rgba(232,121,249,0.8)]" />
-                    <span className="leading-relaxed">{item}</span>
+                    <span className="leading-relaxed">
+                      <strong className="text-white font-semibold">{item.title}:</strong> {item.desc}
+                    </span>
                   </li>
                 ))}
               </ul>
+              
+              <div className="flex items-center gap-6 mt-8 pt-6 border-t border-indigo-500/20">
+                <Link href="https://github.com/Periya-Samy-01" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-indigo-200/70 hover:text-fuchsia-400 transition-colors">
+                  <Github className="w-5 h-5" />
+                  <span>GitHub</span>
+                </Link>
+                <Link href="https://www.linkedin.com/in/periya-samy-ganesan-687370266" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-indigo-200/70 hover:text-fuchsia-400 transition-colors">
+                  <Linkedin className="w-5 h-5" />
+                  <span>LinkedIn</span>
+                </Link>
+              </div>
             </div>
           </div>
         </div>
